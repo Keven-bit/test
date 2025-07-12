@@ -36,3 +36,7 @@ async def write_json(file_path: str, data: Dict[str, Any]) -> None:
             status_code=500,
             detail=f"File write error: {e}"
         )
+
+async def problem_exists(problem_id: str, data_path: str = PROBLEM_DATA_PATH) -> bool:
+    file_path = Path(data_path) / f"problem_{problem_id}.json"
+    return await aiofiles.os.path.exists(file_path)

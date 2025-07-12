@@ -46,16 +46,17 @@ async def add_problem(problemitem: problem.ProblemItem):
     
     ### 401 未登录(已登录用户) 还没写
     
-    filename = f"problem_{problemitem.id}.json"
-    file_path = Path(PROBLEM_DATA_PATH)/filename
+
     
-    if file_path.exists():
+    if await problem_crud.problem_exists(problemitem.id):
         raise HTTPException(
             status_code=409,
             detail=f"ID:{problemitem.id} already exists."
         )
         
-    try:    
+    try:   
+        filename = f"problem_{problemitem.id}.json"
+        file_path = Path(PROBLEM_DATA_PATH)/filename 
         await problem_crud.write_json(file_path, problemitem.model_dump())
         
         return {
@@ -76,15 +77,15 @@ async def add_problem(problemitem: problem.ProblemItem):
 async def delete_problem(problem_id: str):
     # 请求次数计数函数 还没写
     ### 401 未登录(已登录用户) 还没写
-    filename = f"problem_{problem_id}.json"
-    data_path = Path(PROBLEM_DATA_PATH)
-    file_path = data_path/filename
-    if not file_path.exists():
+    if not await problem_crud.problem_exists(problem_id):
         raise HTTPException(
             status_code=404,
             detail=f"Problem with ID {problem_id} not found"
         )
     try:        
+        filename = f"problem_{problem_id}.json"
+        data_path = Path(PROBLEM_DATA_PATH)
+        file_path = data_path/filename
         # delete target problem (and get title of target problem)
         async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
             content = await f.read()
@@ -111,16 +112,15 @@ async def check_problem(problem_id: str):
 
     # 请求次数计数函数 还没写
     ### 401 未登录(已登录用户) 还没写
-    data_path = Path(PROBLEM_DATA_PATH)
-    filename = f"problem_{problem_id}.json"
-    file_path = data_path/filename
-    
-    if not file_path.exists():
+    if not await problem_crud.problem_exists(problem_id):
         raise HTTPException(
             status_code=404,
             detail=f"Problem with ID {problem_id} not found"
         )
     try:    
+        data_path = Path(PROBLEM_DATA_PATH)
+        filename = f"problem_{problem_id}.json"
+        file_path = data_path/filename
         async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
             content = await f.read()
             

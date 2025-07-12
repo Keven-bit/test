@@ -13,15 +13,15 @@ PROBLEM_DATA_PATH = "data/problems"
 
 @problems_router.get("/api/problems")
 async def check_problem_list():
-    try:   
-        # request_count = get_request_count() # 请求次数计数函数还没写
-        # if request_count > 100:
-        #     raise HTTPException(
-        #         status_code=429,
-        #         detail="Rate limit exceeded. Please retry later."
-        #         headers={"Retry-After": "60"}
-        #     )
-
+    
+    # request_count = get_request_count() # 请求次数计数函数还没写
+    # if request_count > 100:
+    #     raise HTTPException(
+    #         status_code=429,
+    #         detail="Rate limit exceeded. Please retry later."
+    #         headers={"Retry-After": "60"}
+    #     )
+    try:
         return {
             "code": 200,
             "msg": "success",
@@ -35,26 +35,27 @@ async def check_problem_list():
 
 @problems_router.post("/api/problems")
 async def add_problem(problemitem: problem.ProblemItem):
-    try:
-        # request_count = get_request_count() # 请求次数计数函数 还没写
-        # if request_count > 100:
-        #     raise HTTPException(
-        #         status_code=429,
-        #         detail="Rate limit exceeded. Please retry later."
-        #         headers={"Retry-After": "60"}
-        #     )
+
+    # request_count = get_request_count() # 请求次数计数函数 还没写
+    # if request_count > 100:
+    #     raise HTTPException(
+    #         status_code=429,
+    #         detail="Rate limit exceeded. Please retry later."
+    #         headers={"Retry-After": "60"}
+    #     )
+    
+    ### 401 未登录(已登录用户) 还没写
+    
+    filename = f"problem_{problemitem.id}.json"
+    file_path = Path(PROBLEM_DATA_PATH)/filename
+    
+    if file_path.exists():
+        raise HTTPException(
+            status_code=409,
+            detail=f"ID:{problemitem.id} already exists."
+        )
         
-        ### 401 未登录(已登录用户) 还没写
-        
-        filename = f"problem_{problemitem.id}.json"
-        file_path = Path(PROBLEM_DATA_PATH)/filename
-        
-        if file_path.exists():
-            raise HTTPException(
-                status_code=409,
-                detail=f"ID:{problemitem.id} already exists."
-            )
-        
+    try:    
         await problem_crud.write_json(file_path, problemitem.model_dump())
         
         return {
@@ -73,18 +74,17 @@ async def add_problem(problemitem: problem.ProblemItem):
     
 @problems_router.delete("/api/problems/{problem_id}")
 async def delete_problem(problem_id: str):
-    try:
-        # 请求次数计数函数 还没写
-        ### 401 未登录(已登录用户) 还没写
-        filename = f"problem_{problem_id}.json"
-        data_path = Path(PROBLEM_DATA_PATH)
-        file_path = data_path/filename
-        if not file_path.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Problem with ID {problem_id} not found"
-            )
-            
+    # 请求次数计数函数 还没写
+    ### 401 未登录(已登录用户) 还没写
+    filename = f"problem_{problem_id}.json"
+    data_path = Path(PROBLEM_DATA_PATH)
+    file_path = data_path/filename
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Problem with ID {problem_id} not found"
+        )
+    try:        
         # delete target problem (and get title of target problem)
         async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
             content = await f.read()
@@ -108,19 +108,19 @@ async def delete_problem(problem_id: str):
     
 @problems_router.get("/api/problems/{problem_id}")
 async def check_problem(problem_id: str):
-    try:
-        # 请求次数计数函数 还没写
-        ### 401 未登录(已登录用户) 还没写
-        data_path = Path(PROBLEM_DATA_PATH)
-        filename = f"problem_{problem_id}.json"
-        file_path = data_path/filename
-        
-        if not file_path.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Problem with ID {problem_id} not found"
-            )
-        
+
+    # 请求次数计数函数 还没写
+    ### 401 未登录(已登录用户) 还没写
+    data_path = Path(PROBLEM_DATA_PATH)
+    filename = f"problem_{problem_id}.json"
+    file_path = data_path/filename
+    
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Problem with ID {problem_id} not found"
+        )
+    try:    
         async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
             content = await f.read()
             

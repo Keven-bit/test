@@ -5,3 +5,4 @@ __pycache__
 output.log
 output.txt
 app.db
+test_update.sh

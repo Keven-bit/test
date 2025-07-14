@@ -4,19 +4,21 @@ from sqlmodel import Field, SQLModel, JSON, Relationship
 from datetime import datetime
 
 
+# =============== Problem =============== #
+
 class SampleItem(BaseModel):
     input: str
     output: str
 
 class ProblemItem(SQLModel, table=True):
-    id: str = Field(default=None, primary_key=True)
+    id: str = Field(primary_key=True)
     title: str
     description: str
     input_description: str
     output_description: str
-    samples: List[SampleItem] = Field(default_factory=list, sa_type=JSON)
+    samples: List[SampleItem] = Field(sa_type=JSON)
     constraints: str
-    testcases: List[SampleItem] = Field(default_factory=list, sa_type=JSON)
+    testcases: List[SampleItem] = Field(sa_type=JSON)
     # optional
     hint: str = ""
     source: str = ""
@@ -34,7 +36,8 @@ class ProblemListItem(BaseModel):
     title: str
     
 
-# --- User ---
+# =============== User =============== #
+
 class UserItem(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
@@ -42,7 +45,8 @@ class UserItem(SQLModel, table=True):
     submissions: List["SubmissionItem"] = Relationship(back_populates="user")
 
 
-# --- Submission ---    
+# =============== Submission =============== #  
+
 class SubmissionCreate(BaseModel):
     problem_id: str
     language: str
@@ -66,7 +70,7 @@ class SubmissionListQuery(BaseModel):
     schema for submission list query
     """
     user_id: int | None = None
-    problem_id: str | None =None
+    problem_id: str | None = None
     status: Literal["pending", "error", "success"] | None = None
     page: int | None = None
     page_size: int | None = None
@@ -91,4 +95,5 @@ class SubmissionListQuery(BaseModel):
             raise ValueError  
         
         return value  
-        
+
+    

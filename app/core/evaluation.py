@@ -8,7 +8,7 @@ from core.errors import HTTPException
 import psutil
 from pathlib import Path
 
-# 还需要添加语言
+
 async def test_code(
     session: ASession, 
     submission_id: int,
@@ -19,83 +19,185 @@ async def test_code(
     memory_limit: int = 0,   
     
 ):
-    temp_file = f"temp_{submission_id}.py"
     try:
-        with open(temp_file, "w") as f:
-            f.write(code)
-        
+        temp_file = None
+        temp_exe_file = None
+        exec_command = None
         is_successful = True
-        pass_count = 0
+        pass_count = 0 
+        
+        # If python, just create py file
+        if language == "python":
+            temp_file = f"temp_{submission_id}.py"
+            exec_command = ["python", temp_file]
+            try:
+                with open(temp_file, "w") as f:
+                    f.write(code)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Server Error: Failed to write python code file.{e}"
+                )
+
+        # If C++, create cpp file and compile it to exe file.
+        elif language == "C++":
+            temp_file = f"temp_{submission_id}.cpp"
+            temp_exe_file = f"temp_{submission_id}.exe"
+            exec_command = [temp_exe_file]
+            
+            try:
+                # Write code into file
+                with open(temp_file, "w") as f:
+                    f.write(code)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Server Error: Failed to write C++ code file.{e}"
+                )
+            
+            try:
+                compile_proc = await asyncio.create_subprocess_exec(
+                    "g++", temp_file, "-o", temp_exe_file,
+                    stderr=PIPE
+                )
+                # Get error in compiling
+                complie_stdout, compile_stderr = await compile_proc.communicate()
+                
+                # Error in compiling
+                if compile_proc.returncode != 0:
+                    is_successful = False
+                    ### 测例信息记录（编译错误） 待补全
+                    submission = await session.get(SubmissionItem, submission_id)
+                    submission.status = "error"
+                    submission.score = 0
+                    session.add(submission)
+                    await session.commit()
+                    return 
+                
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Server Error: C++ compiling failed.{e}"
+                )    
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Server Error: Unsupported programming language '{language}'"
+            )        
+        
+                
+        # Examine test cases, if python or compiled C++
         for case in testcases:
+            proc = None
+            mem_monitor_task = None
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    "python", temp_file,
+                    *exec_command,
                     stdin=PIPE, stdout=PIPE, stderr=PIPE
                 )
-                
-                mem_monitor_task = None
+
+                # Memory monitor
                 if memory_limit > 0:
                     mem_monitor_task = asyncio.create_task(
                         monitor_memory_usage(proc.pid, memory_limit)
                     )
-                
-                try:
-                    stdout, stderr = await asyncio.wait_for(
-                        proc.communicate(input=case["input"].encode()),
-                        timeout=time_limit
-                    )
-                    
-                    # If started a mem monitor, cancel it.
-                    if mem_monitor_task:
-                        mem_monitor_task.cancel()
-                        try:
-                            await mem_monitor_task
-                        except asyncio.CancelledError:
-                            pass
-                    
-                    # Judge if output is correct
-                    output = stdout.decode().strip()
-                    is_correct = output == case["output"].strip()
-                    error = stderr.decode().strip() if stderr else None
-                    
-                    if error:
-                        is_successful = False
-                        ### 测例信息记录（运行错误） 待补全
-                    if not error and is_correct:
-                        pass_count += 1
-                    ### 测例信息记录(答案是否正确) 待补全
-                
-                except TimeoutExpired:
-                    proc.kill()
-                    is_successful = False
-                    ### 测例信息记录(超时) 待补全
-                except MemoryError:
-                    proc.kill()
-                    is_successful = False
-                    ### 测例信息记录（内存超限）待补全
-                    if mem_monitor_task:
-                        mem_monitor_task.cancel()
-                                
             except Exception as e:
+                if proc and proc.returncode is None:
+                    proc.kill()
+                if mem_monitor_task and not mem_monitor_task.done():
+                    mem_monitor_task.cancel()
+                    try: await mem_monitor_task
+                    except asyncio.CancelledError: pass
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Server Error: Failed to start code execution / memory monitor.{e}"
+                )     
+
+            # Start to capture error in submission code running
+            try:
+                # Get output and error
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(input=case["input"].encode()),
+                    timeout=time_limit
+                )
+                
+                # If started a mem monitor, cancel it.
+                if mem_monitor_task:
+                    mem_monitor_task.cancel()
+                    try:
+                        await mem_monitor_task
+                    except asyncio.CancelledError:
+                        pass
+                
+                # Judge if output is correct
+                output = stdout.decode().strip()
+                is_correct = output == case["output"].strip()
+                error = stderr.decode().strip() if stderr else None
+                
+                if error:
+                    is_successful = False
+                    ### 测例信息记录（运行错误） 待补全
+                if not error and is_correct:
+                    pass_count += 1
+                    ### 测例信息记录(答案是否正确) 待补全
+            
+            except TimeoutExpired:
+                proc.kill()
                 is_successful = False
-            #     raise HTTPException(
-            #     status_code=500,
-            #     detail=f"Server Error: {e}"  
-            # )
-    except:
-        is_successful = False ### 调试需注意，这里是否要加try except
+                ### 测例信息记录(超时) 待补全
+            except MemoryError:
+                proc.kill()
+                is_successful = False
+                ### 测例信息记录（内存超限）待补全
+            except Exception as e:
+                is_successful = False 
+                ### UNK  
+            finally:
+                if proc and proc.returncode is None:
+                    proc.kill()
+                if mem_monitor_task and not mem_monitor_task.done():
+                    mem_monitor_task.cancel()
+                    try: await mem_monitor_task
+                    except asyncio.CancelledError: pass
+
+        # Judge test result, and update db
+        try:
+            submission = await session.get(SubmissionItem, submission_id)
+            submission.status = "success" if is_successful else "error"
+            submission.score = pass_count*10
+            
+            session.add(submission)
+            await session.commit()
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Server Error: failed to update submission status in db.{e}"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: An unexpected issue occurred during code evaluation.{e}"
+        )
     
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-    
-    # Judge test result
-    submission = await session.get(SubmissionItem, submission_id)
-    submission.status = "success" if is_successful else "error"
-    submission.score = pass_count*10
-    
-    session.add(submission)
-    await session.commit()
+    # Clean temporary files
+    finally:
+        if temp_file and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception as e:
+                print(f"Warning: fail to clean temporary file '{temp_file}':{e}")
+            
+        if temp_exe_file and os.path.exists(temp_exe_file):
+            try:
+                os.remove(temp_exe_file)
+            except Exception as e:
+                print(f"Warning: fail to clean temporary file '{temp_exe_file}':{e}")
         
+
+
         
 async def monitor_memory_usage(pid: int, memory_limit: int):
     """

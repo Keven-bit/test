@@ -1,7 +1,7 @@
 from schemas import *
-from typing import List, Dict
+from typing import List, Dict, Tuple, Any
 from database import ASession
-from sqlmodel import select
+from sqlmodel import select, func
 from core.evaluation import test_code, monitor_memory_usage
 import asyncio
 
@@ -172,3 +172,65 @@ async def get_submission_fields(
         return dict(zip(fields, submission_data))
     else:
         return submission_data.model_dump()
+    
+
+async def get_submission_list(params: SubmissionListQuery, session: ASession):
+    """
+    Return specific list page of submissions selected by params
+    """
+    query = select(
+        SubmissionItem.id,
+        SubmissionItem.status,
+        SubmissionItem.score,
+        SubmissionItem.counts
+    )
+    if params.user_id is not None:
+        query = query.where(SubmissionItem.user_id == params.user_id)
+    if params.problem_id is not None:
+        query = query.where(SubmissionItem.problem_id == params.problem_id)
+    if params.status is not None:
+        query = query.where(SubmissionItem.status == params.status)
+    
+    # Control demonstration range by 'page' and 'page_size'
+    if params.page is not None and params.page_size is not None:
+        offset = (params.page - 1)*params.page_size
+        query = query.offset(offset).limit(params.page_size)
+        
+    result = await session.execute(query)
+    
+    rows: List[Tuple[Any, ...]] = result.all()
+    
+    result_list = []
+    for row in rows:
+        if row[1] in ["error", "pending"]:
+            result_list.append({
+                "submission_id": str(row[0]),
+                "status": row[1], 
+            })
+        elif row[1] == "success":
+            result_list.append({
+                "submission_id": str(row[0]),
+                "status": row[1], 
+                "score": row[2],
+                "counts": row[3]                
+            })
+    
+    return result_list
+
+async def get_submission_counts(params: SubmissionListQuery, session: ASession):
+    """
+    Return total number of submissions selected by params
+    """
+    query = select(func.count(SubmissionItem.id))
+    if params.user_id is not None:
+        query = query.where(SubmissionItem.user_id == params.user_id)
+    if params.problem_id is not None:
+        query = query.where(SubmissionItem.problem_id == params.problem_id)
+    if params.status is not None:
+        query = query.where(SubmissionItem.status == params.status)
+    
+    result = await session.execute(query)
+    
+    total_count = result.scalar_one()
+    
+    return total_count

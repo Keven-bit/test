@@ -146,7 +146,7 @@ async def submission_exists(submission_id: int, session:ASession):
 
 
 async def get_submission_fields(
-    submission_id: str, 
+    submission_id: int, 
     session: ASession,
     fields: List[str] | None = None,
 ):
@@ -234,3 +234,27 @@ async def get_submission_counts(params: SubmissionListQuery, session: ASession):
     total_count = result.scalar_one()
     
     return total_count
+
+async def submission_rejudge(submission_id: int, session: ASession):
+    # Get necessary info of submission
+    submission_dict = get_submission_fields(
+        submission_id, 
+        ["code", "language", "problem_id"]
+    )
+    
+    # Get necessary info of problem
+    problem_dict = get_problem_fields(
+    problem_id=submission_dict["problem_id"], 
+    session=session, 
+    fields=["testcases", "time_limit", "memory_limit"]
+    )
+    
+    test_code(
+        session=session,
+        submission_id=submission_id,
+        code=submission_dict["code"],
+        testcases=problem_dict["testcases"],
+        language=submission_dict["language"],
+        time_limit=problem_dict["time_limit"],
+        memory_limit=problem_dict["memory_limit"],
+    )

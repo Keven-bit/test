@@ -5,9 +5,9 @@ from db import crud
 from db.database import ASession
 
 
-problems_router = APIRouter()
+problems_router = APIRouter(prefix="/api/problems")
 
-@problems_router.get("/api/problems")
+@problems_router.get("/")
 async def check_problem_list(session: ASession):
     
     # request_count = get_request_count() # 请求次数计数函数还没写
@@ -29,7 +29,7 @@ async def check_problem_list(session: ASession):
             detail=f"Server Error: {e}"
         )
 
-@problems_router.post("/api/problems")
+@problems_router.post("/")
 async def add_problem(problemitem: ProblemItem, session: ASession):
 
     # request_count = get_request_count() # 请求次数计数函数 还没写
@@ -65,7 +65,7 @@ async def add_problem(problemitem: ProblemItem, session: ASession):
             detail=f"Server Error: {e}"
         )
     
-@problems_router.delete("/api/problems/{problem_id}")
+@problems_router.delete("/{problem_id}")
 async def delete_problem(problem_id: str, session: ASession):
     # 请求次数计数函数 还没写
     ### 401 未登录(已登录用户) 还没写
@@ -93,7 +93,7 @@ async def delete_problem(problem_id: str, session: ASession):
             detail=f"Server Error: {e}"  
         )
     
-@problems_router.get("/api/problems/{problem_id}")
+@problems_router.get("/{problem_id}")
 async def check_problem(problem_id: str, session: ASession):
 
     # 请求次数计数函数 还没写

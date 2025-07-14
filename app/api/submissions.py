@@ -2,17 +2,13 @@ from fastapi import APIRouter, Depends
 from db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
 from db import crud
-from pathlib import Path
-from typing import List, Dict
-import json
-import aiofiles
 from db.database import ASession
-from core.evaluation import test_code
 
 
-submissions_router = APIRouter()
 
-@submissions_router.post("/api/submissions/")
+submissions_router = APIRouter(prefix="/api/submissions")
+
+@submissions_router.post("/")
 async def submit(
     submit: SubmissionCreate,
     session = ASession
@@ -44,7 +40,7 @@ async def submit(
             detail=f"Server Error: {e}"  
         )
     
-@submissions_router.get("/api/submissions/{submission_id}")
+@submissions_router.get("/{submission_id}")
 async def check_result(submission_id: int, session: ASession):
     ## 403 限本人或管理员 待补全
     
@@ -72,7 +68,7 @@ async def check_result(submission_id: int, session: ASession):
         )
  
         
-@submissions_router.get("/api/submissions/")
+@submissions_router.get("/")
 async def check_result_list(
     session: ASession,
     params: SubmissionListQuery = Depends()
@@ -96,7 +92,7 @@ async def check_result_list(
         )
         
 
-@submissions_router.get("/api/submissions/{submission_id}/rejudge")
+@submissions_router.get("/{submission_id}/rejudge")
 async def rejudge(submission_id: int, session: ASession):
     ## 403 限管理员 待补全
     

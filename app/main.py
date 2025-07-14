@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .api import problems
+from .api import problems, submissions
 from .core import errors
 from fastapi.exceptions import HTTPException, RequestValidationError
 from contextlib import asynccontextmanager
@@ -24,6 +24,7 @@ app.exception_handler(HTTPException)(errors.custom_http_exception_handler)
 app.exception_handler(RequestValidationError)(errors.custom_validation_exception_handler)
 
 app.include_router(problems.problems_router)
+app.include_router(submissions.submissions_router)
 
 @app.get("/")
 async def welcome():

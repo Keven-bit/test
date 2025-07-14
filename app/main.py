@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from .api import problems
 from .core import errors
-from .database import get_async_session
 from fastapi.exceptions import HTTPException, RequestValidationError
 from contextlib import asynccontextmanager
-from .database import create_db_and_tables
+from db.database import create_db_and_tables
 
 
 # Async table generation when start up

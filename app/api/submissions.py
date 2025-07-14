@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
 from db import crud
@@ -43,7 +43,7 @@ async def submit(
             detail=f"Server Error: {e}"  
         )
     
-@submissions_router.post("/api/submissions/{submission_id}")
+@submissions_router.get("/api/submissions/{submission_id}")
 async def check_result(submission_id: int, session: ASession):
     ## 403 限本人或管理员 待补全
     
@@ -69,3 +69,30 @@ async def check_result(submission_id: int, session: ASession):
             status_code=500,
             detail=f"Server Error: {e}"  
         )
+ 
+        
+@submissions_router.get("/api/submissions/")
+async def check_result_list(
+    session: ASession,
+    params: SubmissionListQuery = Depends()
+):
+    ## 403 限本人或管理员 待补全
+    try:
+        submissionlist = crud.get_submission_list(params, session)
+        total = crud.get_submission_counts(params, session)
+        return {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "total": total,
+                "submissions": submissionlist
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: {e}"  
+        )
+        
+        
+    

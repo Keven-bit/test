@@ -7,6 +7,7 @@ from typing import List, Dict
 import json
 import aiofiles
 from db.database import ASession
+from core.evaluation import test_code
 
 
 submissions_router = APIRouter()
@@ -94,5 +95,34 @@ async def check_result_list(
             detail=f"Server Error: {e}"  
         )
         
+
+@submissions_router.get("/api/submissions/{submission_id}/rejudge")
+async def rejudge(submission_id: int, session: ASession):
+    ## 403 限管理员 待补全
+    
+    if not await crud.submission_exists(submission_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Problem with ID {submit.problem_id} not found"
+        )
+    
+    try:
+        crud.submission_rejudge(submission_id, session)
+        return{
+            "code": 200,
+            "msg": "rejudge started",
+            "data": {
+                "submission_id": submission_id,
+                "status": "pending"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: {e}"  
+        )
+
+
+
         
     

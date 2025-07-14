@@ -23,8 +23,8 @@ class ProblemItem(SQLModel, table=True):
     hint: str = ""
     source: str = ""
     tags: List[str] = Field(default_factory=list, sa_type=JSON)
-    time_limit: float = 0.0
-    memory_limit: int = 0
+    time_limit: float = 3.0
+    memory_limit: int = 128
     author: str = ""
     difficulty: str = ""
     
@@ -96,4 +96,6 @@ class SubmissionListQuery(BaseModel):
         
         return value  
 
+    
+    
     

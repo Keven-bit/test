@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from typing import List, Optional, Literal
 from sqlmodel import Field, SQLModel, JSON, Relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
+import bcrypt
 
 
 # =============== Problem =============== #
@@ -39,12 +40,35 @@ class ProblemListItem(BaseModel):
 
 # =============== User =============== #
 
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+    BANNED = "banned"
+    
+class UserCreate(BaseModel):
+    # Check name and password length
+    username: str = Field(min_length=3, max_length=40)
+    password: str = Field(min_length=6)
+
 class UserItem(SQLModel, table=True):
-    id: int = Field(primary_key=True)
-    name: str
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    hashed_password: str
+    role: UserRole = UserRole.USER
+    join_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    submit_count: int = 0
+    resolve_count: int = 0
     
     submissions: List["SubmissionItem"] = Relationship(back_populates="user")
-
+    
+    @classmethod
+    def create_with_hashed_password(cls, user_create: UserCreate):
+        hashed_password = bcrypt.hashpw(user_create.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        return cls(username=user_create.username,hashed_password=hashed_password)
+    
+    def verify_password(self, password:str) -> bool:
+        return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
+    
 
 # =============== Submission =============== #  
 

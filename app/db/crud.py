@@ -262,3 +262,7 @@ async def submission_rejudge(submission_id: int, session: ASession):
     
 # ============================= Users ============================= #
 
+async def user_exists(username: str, session: ASession) -> bool:
+    statement = select(UserItem.username).where(UserItem.username == username)
+    result = await session.execute(statement)
+    return result.first() is not None

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .api import problems, submissions
+from .api import problems, submissions, languages, users, auth
 from .core import errors
 from fastapi.exceptions import HTTPException, RequestValidationError
 from contextlib import asynccontextmanager
@@ -25,6 +25,9 @@ app.exception_handler(RequestValidationError)(errors.custom_validation_exception
 
 app.include_router(problems.problems_router)
 app.include_router(submissions.submissions_router)
+app.include_router(languages.languages_router)
+app.include_router(users.users_router)
+app.include_router(auth.auth_router)
 
 @app.get("/")
 async def welcome():

@@ -104,6 +104,16 @@ class SubmissionListQuery(BaseModel):
         
         return value  
         
+        
+# =============== Language =============== #
 
+class LanguageItem(SQLModel, table=True):
+    name: str = Field(primary_key=True)
+    file_ext: str
+    complie_cmd: str | None = None
+    run_cmd: str
+    time_limit: float = None
+    memory_limit: int = None
+    
     
     

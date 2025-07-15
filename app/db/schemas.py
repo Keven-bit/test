@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field as PydanticField, field_validator, ValidationError
 from typing import List, Optional, Literal
 from sqlmodel import Field, SQLModel, JSON, Relationship
 from datetime import datetime, timezone
@@ -47,8 +47,8 @@ class UserRole(str, Enum):
     
 class UserCreate(BaseModel):
     # Check name and password length
-    username: str = Field(min_length=3, max_length=40)
-    password: str = Field(min_length=6)
+    username: str = PydanticField(min_length=3, max_length=40)
+    password: str = PydanticField(min_length=6)
 
 class UserItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

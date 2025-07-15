@@ -1,8 +1,8 @@
-from schemas import *
+from ..db.schemas import *
 from typing import List, Dict, Tuple, Any
-from database import ASession
+from ..db.database import ASession
 from sqlmodel import select, func
-from core.evaluation import test_code, monitor_memory_usage
+from ..core.evaluation import test_code, monitor_memory_usage
 import asyncio
 
 PROBLEM_DATA_PATH = "data/problems"
@@ -178,25 +178,25 @@ async def get_submission_list(params: SubmissionListQuery, session: ASession):
     """
     Return specific list page of submissions selected by params
     """
-    query = select(
+    statement = select(
         SubmissionItem.id,
         SubmissionItem.status,
         SubmissionItem.score,
         SubmissionItem.counts
     )
     if params.user_id is not None:
-        query = query.where(SubmissionItem.user_id == params.user_id)
+        statement = statement.where(SubmissionItem.user_id == params.user_id)
     if params.problem_id is not None:
-        query = query.where(SubmissionItem.problem_id == params.problem_id)
+        statement = statement.where(SubmissionItem.problem_id == params.problem_id)
     if params.status is not None:
-        query = query.where(SubmissionItem.status == params.status)
+        statement = statement.where(SubmissionItem.status == params.status)
     
     # Control demonstration range by 'page' and 'page_size'
     if params.page is not None and params.page_size is not None:
         offset = (params.page - 1)*params.page_size
-        query = query.offset(offset).limit(params.page_size)
+        statement = statement.offset(offset).limit(params.page_size)
         
-    result = await session.execute(query)
+    result = await session.execute(statement)
     
     rows: List[Tuple[Any, ...]] = result.all()
     
@@ -221,15 +221,15 @@ async def get_submission_counts(params: SubmissionListQuery, session: ASession):
     """
     Return total number of submissions selected by params
     """
-    query = select(func.count(SubmissionItem.id))
+    statement = select(func.count(SubmissionItem.id))
     if params.user_id is not None:
-        query = query.where(SubmissionItem.user_id == params.user_id)
+        statement = statement.where(SubmissionItem.user_id == params.user_id)
     if params.problem_id is not None:
-        query = query.where(SubmissionItem.problem_id == params.problem_id)
+        statement = statement.where(SubmissionItem.problem_id == params.problem_id)
     if params.status is not None:
-        query = query.where(SubmissionItem.status == params.status)
+        statement = statement.where(SubmissionItem.status == params.status)
     
-    result = await session.execute(query)
+    result = await session.execute(statement)
     
     total_count = result.scalar_one()
     
@@ -258,3 +258,7 @@ async def submission_rejudge(submission_id: int, session: ASession):
         time_limit=problem_dict["time_limit"],
         memory_limit=problem_dict["memory_limit"],
     )
+    
+    
+# ============================= Language ============================= #
+

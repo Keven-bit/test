@@ -3,7 +3,7 @@ from .api import problems, submissions
 from .core import errors
 from fastapi.exceptions import HTTPException, RequestValidationError
 from contextlib import asynccontextmanager
-from db.database import create_db_and_tables
+from .db.database import create_db_and_tables
 
 
 # Async table generation when start up

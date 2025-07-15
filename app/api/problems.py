@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-from db.schemas import ProblemItem
+from ..db.schemas import ProblemItem
 from ..core.errors import HTTPException
-from db import crud
-from db.database import ASession
+from ..db import crud
+from ..db.database import ASession
 
 
 problems_router = APIRouter(prefix="/api/problems")

@@ -2,9 +2,9 @@ import asyncio
 from subprocess import PIPE, TimeoutExpired
 from typing import List, Dict
 import os
-from db.schemas import *
-from db.database import ASession
-from core.errors import HTTPException
+from ..db.schemas import *
+from ..db.database import ASession
+from ..core.errors import HTTPException
 import psutil
 from pathlib import Path
 
@@ -15,8 +15,8 @@ async def test_code(
     code: str,
     testcases: List[SampleItem],
     language: str,
-    time_limit: float = 0.0,
-    memory_limit: int = 0,   
+    time_limit: float = 3.0,
+    memory_limit: int = 128,   
     
 ):
     try:

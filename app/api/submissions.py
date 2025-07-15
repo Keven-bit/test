@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
-from db.schemas import *
+from ..db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
-from db import crud
-from db.database import ASession
+from ..db import crud
+from ..db.database import ASession
 
 
 

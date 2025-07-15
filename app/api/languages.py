@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from ..db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
-from ..db import crud
 from ..db.database import ASession
 from sqlmodel import select
 
-submissions_router = APIRouter(prefix="/api/languages")
+languages_router = APIRouter(prefix="/api/languages")
 
-@submissions_router.post("/")
+@languages_router.post("/")
 async def register_language(language: LanguageItem, session: ASession):
     try:
         # 403 用户无权限
@@ -20,7 +19,7 @@ async def register_language(language: LanguageItem, session: ASession):
             detail="Server Error: Failed to register language."
         )
         
-@submissions_router.get("/")
+@languages_router.get("/")
 async def check_language_list(sesssion: ASession):
     try:
         name_list = []

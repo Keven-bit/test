@@ -88,7 +88,7 @@ async def problem_exists(problem_id: str, session: ASession) -> bool:
 
 
 # Get whole info of specific problem
-async def check_problem_db(problem_id: str, session: ASession):
+async def get_problem_details(problem_id: str, session: ASession):
     problem = await session.get(ProblemItem, problem_id)
     return problem
 
@@ -260,5 +260,5 @@ async def submission_rejudge(submission_id: int, session: ASession):
     )
     
     
-# ============================= Language ============================= #
+# ============================= Users ============================= #
 

@@ -41,7 +41,7 @@ async def submit(
         )
     
 @submissions_router.get("/{submission_id}")
-async def check_result(submission_id: int, session: ASession):
+async def get_result(submission_id: int, session: ASession):
     ## 403 限本人或管理员 待补全
     
     if not await crud.submission_exists(submission_id):
@@ -69,7 +69,7 @@ async def check_result(submission_id: int, session: ASession):
  
         
 @submissions_router.get("/")
-async def check_result_list(
+async def get_result_list(
     session: ASession,
     params: SubmissionListQuery = Depends()
 ):

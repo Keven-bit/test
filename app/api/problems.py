@@ -8,7 +8,7 @@ from ..db.database import ASession
 problems_router = APIRouter(prefix="/api/problems")
 
 @problems_router.get("/")
-async def check_problem_list(session: ASession):
+async def get_problem_list(session: ASession):
     
     # request_count = get_request_count() # 请求次数计数函数还没写
     # if request_count > 100:
@@ -94,7 +94,7 @@ async def delete_problem(problem_id: str, session: ASession):
         )
     
 @problems_router.get("/{problem_id}")
-async def check_problem(problem_id: str, session: ASession):
+async def get_problem(problem_id: str, session: ASession):
 
     # 请求次数计数函数 还没写
     ### 401 未登录(已登录用户) 还没写
@@ -104,7 +104,7 @@ async def check_problem(problem_id: str, session: ASession):
             detail=f"Problem with ID {problem_id} not found"
         )
     try:    
-        problem_item = await crud.check_problem_db(problem_id, session=session)
+        problem_item = await crud.get_problem_details(problem_id, session=session)
         return {
             "code": 200,
             "msg": "success",

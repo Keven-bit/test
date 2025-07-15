@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator, ValidationError
 from typing import List, Optional, Literal
 from sqlmodel import Field, SQLModel, JSON, Relationship
 from datetime import datetime
+from enum import Enum
 
 
 # =============== Problem =============== #
@@ -53,17 +54,24 @@ class SubmissionCreate(BaseModel):
     code: str
 
 
+class SubmissionStatus(str, Enum):
+    PENDING = "pending"
+    ERROR = "error"
+    SUCCESS = "success"
+
+
 class SubmissionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user_item.id")
     problem_id: str = Field(foreign_key="problem_item.id")
     code: str
-    status: Literal["pending", "error", "success"] = "pending"
+    status: SubmissionStatus = SubmissionStatus.PENDING
     score: int | None = None
     counts: int 
     
     user: Optional[UserItem] = Relationship(back_populates="submissions")
     problem: Optional[ProblemItem] = Relationship(back_populates="submissions")
+    
     
 class SubmissionListQuery(BaseModel):
     """
@@ -71,7 +79,7 @@ class SubmissionListQuery(BaseModel):
     """
     user_id: int | None = None
     problem_id: str | None = None
-    status: Literal["pending", "error", "success"] | None = None
+    status: SubmissionStatus | None = None
     page: int | None = None
     page_size: int | None = None
     
@@ -95,7 +103,7 @@ class SubmissionListQuery(BaseModel):
             raise ValueError  
         
         return value  
+        
 
-    
     
     

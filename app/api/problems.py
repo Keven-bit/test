@@ -61,7 +61,8 @@ async def add_problem(
             "code": 200,
             "msg": "add success",
             "data": {
-                problemitem.id: problemitem.title
+                "id": problemitem.id,
+                "title": problemitem.title
             }
         }
         

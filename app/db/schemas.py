@@ -149,6 +149,31 @@ class SubmissionListQuery(BaseModel):
         
         return value  
         
+# =============== Submission Log =============== #
+
+class CaseResult(str, Enum):
+    AC = "AC"
+    WA = "WA"
+    TLE = "TLE"
+    MLE = "MLE"
+    RE = "RE"
+    CE = "CE"
+    UNK = "UNK"
+    
+    
+class CaseItem(BaseModel):
+    id: int
+    result: CaseResult
+    time: float
+    memory: int
+    
+
+class SubmissionLog(SQLModel):
+    submission_id: int = Field(primary_key=True)
+    details: List[CaseItem] = Field(sa_type=JSON)
+    score: int
+    counts: int
+
         
 # =============== Language =============== #
 

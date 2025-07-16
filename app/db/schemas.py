@@ -85,23 +85,23 @@ class UserListQuery(BaseModel):
     page: int | None = None
     page_size: int | None = None
     
-    @field_validator('*', mode="after")
-    @classmethod
-    def validate_query_params(cls, value, info):
-        """
-        validates query params, if params are wrong, raises ValueError.
-        """
-        data = info.data
+    # @field_validator('*', mode="after")
+    # @classmethod
+    # def validate_query_params(cls, value, info):
+    #     """
+    #     validates query params, if params are wrong, raises ValueError.
+    #     """
+    #     data = info.data
         
-        page = data.get("page")
-        page_size = data.get("page_size")
+    #     page = data.get("page")
+    #     page_size = data.get("page_size")
         
-        if page is None and page_size is not None:
-            data['page'] = 1
-        elif page is not None and page_size is None:
-            raise ValueError  
+    #     if page is None and page_size is not None:
+    #         data['page'] = 1
+    #     elif page is not None and page_size is None:
+    #         raise ValueError  
     
-        return value  
+    #     return value  
     
     
 # =============== Submission =============== #  
@@ -186,26 +186,26 @@ class LogAccessQuery(BaseModel):
     page: int | None = None
     page_size: int | None = None
     
-    @field_validator('*', mode="after")
-    @classmethod
-    def validate_query_params(cls, value, info):
-        """
-        validates query params, if params are wrong, raises ValueError.
-        """
-        data = info.data
+    # @field_validator('*', mode="after")
+    # @classmethod
+    # def validate_query_params(cls, value, info):
+    #     """
+    #     validates query params, if params are wrong, raises ValueError.
+    #     """
+    #     data = info.data
         
-        if data.get("user_id") is None and data.get("problem_id") is None:
-            raise ValueError
+    #     if data.get("user_id") is None and data.get("problem_id") is None:
+    #         raise ValueError
         
-        page = data.get("page")
-        page_size = data.get("page_size")
+    #     page = data.get("page")
+    #     page_size = data.get("page_size")
         
-        if page is None and page_size is not None:
-            data['page'] = 1
-        elif page is not None and page_size is None:
-            raise ValueError  
+    #     if page is None and page_size is not None:
+    #         data['page'] = 1
+    #     elif page is not None and page_size is None:
+    #         raise ValueError  
         
-        return value  
+    #     return value  
     
 
 class LogAccess(SQLModel, table=True):

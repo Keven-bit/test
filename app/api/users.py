@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from ..db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
 from ..core.security import *
@@ -105,8 +105,8 @@ async def get_user(
 @users_router.put("/{user_id}/role")
 async def update_role(
     user_id: str,
-    role: UserRole,
     session: ASession,
+    role: UserRole = Body(..., embed=True),
     _ = Depends(check_admin_and_get_user)
 ):
     target_user: Optional[UserItem] = await crud.get_user_by_id(user_id, session)
@@ -144,6 +144,14 @@ async def get_user_list(
     params: UserListQuery = Depends(),
     _ = Depends(check_admin_and_get_user)
 ):
+    if params.page is None and params.page_size is not None:
+        params.page = 1
+    elif params.page is not None and params.page_size is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Params error."
+        )  
+    
     try:
         user_list = await crud.get_user_list_page(params, session)
         total = await crud.get_user_counts(session)

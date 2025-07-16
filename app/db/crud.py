@@ -328,6 +328,45 @@ async def get_user_by_submission_id(submission_id: int, session: ASession) -> Op
             status_code=500,
             detail=f"Server Error."
         )   
+        
+# ============================= Submission Logs ============================= #
+async def get_log_access_list(params: LogAccessQuery, session: ASession):
+    try:
+        statement = select(LogAccess)
+        if params.user_id is not None:
+            statement = statement.where(LogAccess.user_id == params.user_id)
+        if params.problem_id is not None:
+            statement = statement.where(LogAccess.problem_id == params.problem_id)
+        
+        # Control demonstration range by 'page' and 'page_size'
+        if params.page is not None and params.page_size is not None:
+            offset = (params.page - 1)*params.page_size
+            statement = statement.offset(offset).limit(params.page_size)
+            
+        result = await session.execute(statement)
+        
+        rows: List[Tuple[Any, ...]] = result.all()
+        
+        result_list = []
+        for row in rows:
+            result_list.append({
+                "user_id": row[1],
+                "problem_id": row[2],
+                "action": row[3],
+                "time": row[4],
+                "status": row[5]
+            })
+
+        return result_list
+    except Exception as e:
+        print(f"Server Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error."
+        )       
+
+            
+        
     
 # ============================= Users ============================= #
 

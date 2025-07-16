@@ -183,7 +183,7 @@ class SubmissionLog(SQLModel, table=True):
     submission: Optional[SubmissionItem] = Relationship(back_populates="submission_log")
     
     
-class LogVisibility(SQLModel, tabel=True):
+class LogVisibility(SQLModel, table=True):
     problem_id: str = Field(primary_key=True, foreign_key="problemitem.id")
     public_cases: bool = False 
 

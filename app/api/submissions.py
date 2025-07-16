@@ -3,18 +3,18 @@ from ..db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
 from ..db import crud
 from ..db.database import ASession
-
-
+from ..core.security import *
+from sqlmodel import select
 
 submissions_router = APIRouter(prefix="/api/submissions")
 
 @submissions_router.post("/")
 async def submit(
     submit: SubmissionCreate,
-    session = ASession
+    session = ASession,
+    user: UserItem = Depends(check_login_and_get_user)
 ):
     ## 429 提交频率超限 待补全
-    ## 403 用户被禁用(登录用户) 待补全
     
     if not await crud.problem_exists(submit.problem_id):
         raise HTTPException(
@@ -24,7 +24,7 @@ async def submit(
     
     try:
         # Get submission id, and start async evaluation.
-        submission_id = crud.submit_test_get_id(submit, session)
+        submission_id = crud.submit_test_get_id(submit, user.id, session)
         return{
             "code": 200,
             "msg": "success",
@@ -41,10 +41,14 @@ async def submit(
         )
     
 @submissions_router.get("/{submission_id}")
-async def get_result(submission_id: int, session: ASession):
-    ## 403 限本人或管理员 待补全
+async def get_result(
+    submission_id: int, 
+    session: ASession, 
+    user: UserItem = Depends(check_login_and_get_user)
+):
+    ## 请求超限
     
-    if not await crud.submission_exists(submission_id):
+    if not await crud.submission_exists(submission_id, session):
         raise HTTPException(
             status_code=404,
             detail=f"Problem with ID {submit.problem_id} not found"
@@ -52,50 +56,90 @@ async def get_result(submission_id: int, session: ASession):
     
     # Get required fields
     try:
-        sub_dict = crud.get_submission_fields(submission_id, ["status", "score", "counts"])
-        return {
-            "code": 200,
-            "msg": sub_dict["status"],
-            "data":{
-                "score": sub_dict["score"],
-                "counts": sub_dict["counts"],
-            }
-        }
+        sub_dict = crud.get_submission_fields(submission_id, session, ["status", "score", "counts", "user_id"])
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Server Error: {e}"  
+        )        
+    
+    # Only submission owner or admin can view it     
+    if user.id != sub_dict["user_id"] and user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Lack Permission."
         )
+    
+    return {
+        "code": 200,
+        "msg": sub_dict["status"],
+        "data":{
+            "score": sub_dict["score"],
+            "counts": sub_dict["counts"],
+        }
+    }
+
  
         
 @submissions_router.get("/")
 async def get_result_list(
     session: ASession,
-    params: SubmissionListQuery = Depends()
+    params: SubmissionListQuery = Depends(),
+    user: UserItem = Depends(check_login_and_get_user)
 ):
-    ## 403 限本人或管理员 待补全
-    try:
-        submissionlist = crud.get_submission_list(params, session)
-        total = crud.get_submission_counts(params, session)
-        return {
-            "code": 200,
-            "msg": "success",
-            "data": {
-                "total": total,
-                "submissions": submissionlist
+    # Admin can view all submissions
+    if user.role == "admin":
+        try:
+            submissionlist = crud.get_submission_list(params, session)
+            total = crud.get_submission_counts(params, session)
+            return {
+                "code": 200,
+                "msg": "success",
+                "data": {
+                    "total": total,
+                    "submissions": submissionlist
+                }
             }
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Server Error: {e}"  
-        )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Server Error: {e}"  
+            )           
+            
+    # Non-admin users can only query their own submissions.
+    else:
+        if params.user_id is None:
+            params.user_id = user.id
+        elif params.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Lack Permission. You can only query your own submissions."
+            )
+        
+        try:
+            submissionlist = crud.get_submission_list(params, session)
+            total = crud.get_submission_counts(params, session)
+            return {
+                "code": 200,
+                "msg": "success",
+                "data": {
+                    "total": total,
+                    "submissions": submissionlist
+                }
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Server Error: {e}"  
+            )           
         
 
 @submissions_router.get("/{submission_id}/rejudge")
-async def rejudge(submission_id: int, session: ASession):
-    ## 403 限管理员 待补全
-    
+async def rejudge(
+    submission_id: int, 
+    session: ASession, 
+    _ = Depends(check_admin_and_get_user)
+): 
     if not await crud.submission_exists(submission_id):
         raise HTTPException(
             status_code=404,

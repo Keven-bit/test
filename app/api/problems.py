@@ -3,13 +3,16 @@ from ..db.schemas import ProblemItem
 from ..core.errors import HTTPException
 from ..db import crud
 from ..db.database import ASession
+from ..core.security import *
 
 
 problems_router = APIRouter(prefix="/api/problems")
 
 @problems_router.get("/")
-async def get_problem_list(session: ASession):
-    
+async def get_problem_list(
+    session: ASession, 
+    _ = Depends(check_login_and_get_user)
+):
     # request_count = get_request_count() # 请求次数计数函数还没写
     # if request_count > 100:
     #     raise HTTPException(
@@ -17,6 +20,7 @@ async def get_problem_list(session: ASession):
     #         detail="Rate limit exceeded. Please retry later."
     #         headers={"Retry-After": "60"}
     #     )
+    
     try:
         return {
             "code": 200,
@@ -30,7 +34,11 @@ async def get_problem_list(session: ASession):
         )
 
 @problems_router.post("/")
-async def add_problem(problemitem: ProblemItem, session: ASession):
+async def add_problem(
+    problemitem: ProblemItem, 
+    session: ASession,
+    _ = Depends(check_login_and_get_user)
+):
 
     # request_count = get_request_count() # 请求次数计数函数 还没写
     # if request_count > 100:
@@ -39,8 +47,6 @@ async def add_problem(problemitem: ProblemItem, session: ASession):
     #         detail="Rate limit exceeded. Please retry later."
     #         headers={"Retry-After": "60"}
     #     )
-    
-    ### 401 未登录(已登录用户) 还没写
     
     if await crud.problem_exists(problemitem.id, session=session):
         raise HTTPException(
@@ -66,9 +72,13 @@ async def add_problem(problemitem: ProblemItem, session: ASession):
         )
     
 @problems_router.delete("/{problem_id}")
-async def delete_problem(problem_id: str, session: ASession):
+async def delete_problem(
+    problem_id: str, 
+    session: ASession,
+    _ = Depends(check_admin_and_get_user)
+):
     # 请求次数计数函数 还没写
-    ### 401 未登录(已登录用户) 还没写
+
     if not await crud.problem_exists(problem_id, session=session):
         raise HTTPException(
             status_code=404,
@@ -94,10 +104,13 @@ async def delete_problem(problem_id: str, session: ASession):
         )
     
 @problems_router.get("/{problem_id}")
-async def get_problem(problem_id: str, session: ASession):
-
+async def get_problem(
+    problem_id: str, 
+    session: ASession,
+    _ = Depends(check_login_and_get_user)
+):
     # 请求次数计数函数 还没写
-    ### 401 未登录(已登录用户) 还没写
+    
     if not await crud.problem_exists(problem_id, session=session):
         raise HTTPException(
             status_code=404,

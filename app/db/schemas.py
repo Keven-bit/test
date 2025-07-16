@@ -99,7 +99,7 @@ class SubmissionItem(SQLModel, table=True):
     
 class SubmissionListQuery(BaseModel):
     """
-    schema for submission list query
+    schema for submission list query.
     """
     user_id: int | None = None
     problem_id: str | None = None

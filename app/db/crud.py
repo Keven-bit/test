@@ -96,7 +96,7 @@ async def get_problem_details(problem_id: str, session: ASession):
 # ============================= Submissions ============================= #
 
 
-async def submit_test_get_id(submit: SubmissionCreate, session: ASession):
+async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: ASession):
     """
     Submit code to test, and return submission_id
     """
@@ -109,7 +109,7 @@ async def submit_test_get_id(submit: SubmissionCreate, session: ASession):
     testcases = problem_dict["testcases"]
     counts = len(testcases)*10
     raw_submission = {
-        "user_id": "", ### 待补全
+        "user_id": user_id, 
         "problem_id": submit.problem_id,
         "code": submit.code,
         "status": "pending",

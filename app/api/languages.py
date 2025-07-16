@@ -1,15 +1,19 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from ..db.schemas import *
 from ..core.errors import HTTPException, RequestValidationError
 from ..db.database import ASession
 from sqlmodel import select
+from ..core.security import *
 
 languages_router = APIRouter(prefix="/api/languages")
 
 @languages_router.post("/")
-async def register_language(language: LanguageItem, session: ASession):
+async def register_language(
+    language: LanguageItem, 
+    session: ASession,
+    _ = Depends(check_login_and_get_user)
+):
     try:
-        # 403 用户无权限
         session.add(language)
         await session.commit()
     except Exception as e:
@@ -20,11 +24,11 @@ async def register_language(language: LanguageItem, session: ASession):
         )
         
 @languages_router.get("/")
-async def check_language_list(sesssion: ASession):
+async def check_language_list(session: ASession):
     try:
         name_list = []
         statement = select(LanguageItem.name)
-        results = sesssion.execute(statement)
+        results = session.execute(statement)
         for language in results:
             name_list.append(language.name)
         return {

@@ -1,7 +1,7 @@
 from ..db.schemas import *
 from typing import List, Tuple, Any
 from ..db.database import ASession
-from sqlmodel import select, func
+from sqlmodel import select, func, delete
 from ..core.evaluation import test_code
 from ..core.errors import HTTPException
 import asyncio
@@ -78,8 +78,28 @@ async def delete_problem_db(problem_id: str, session: ASession) -> None:
     """
     Delete data in db.
     """
-    problem = await session.get(ProblemItem, problem_id) # Select by Primary_key!
-    await session.delete(problem)
+    # First, delete all data related to this problem.
+    result = await session.execute(
+        select(SubmissionItem.id).where(SubmissionItem.problem_id == problem_id)
+    )
+    submission_delete_ids = result.scalars().all()
+    if submission_delete_ids:
+        await session.execute(
+            delete(SubmissionLog).where(SubmissionLog.submission_id.in_(submission_delete_ids))
+        )
+    await session.execute(
+        delete(SubmissionItem).where(SubmissionItem.problem_id == problem_id)
+    )
+    await session.execute(
+        delete(LogVisibility).where(LogVisibility.problem_id == problem_id)
+    )
+    await session.execute(
+        delete(LogAccess).where(LogAccess.problem_id == problem_id)
+    )
+    await session.execute(
+        delete(ProblemItem).where(ProblemItem.id == problem_id)
+    )
+
     await session.commit()
         
 

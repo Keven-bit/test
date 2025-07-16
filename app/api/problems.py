@@ -95,7 +95,10 @@ async def delete_problem(
         return {
             "code": 200,
             "msg": "delete success",
-            "data": {problem_id: problem_title}
+            "data": {
+                "id": problem_id,
+                "title": problem_title
+            }
         }
         
     except Exception as e:

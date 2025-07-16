@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
                 password=INITIAL_ADMIN_PASSWORD
             )
             new_admin = UserItem.create_with_hashed_password(admin_create)
+            new_admin.role = "admin"
             session.add(new_admin)
             await session.commit()
             await session.refresh(new_admin)

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field as PydanticField, field_validator, ValidationError
-from typing import List, Optional
-from sqlmodel import Field, SQLModel, JSON, Relationship
+from typing import List, Optional, Dict
+from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy.types import JSON
 from datetime import datetime, timezone
 from enum import Enum
 import bcrypt
@@ -176,7 +177,7 @@ class CaseItem(BaseModel):
 
 class SubmissionLog(SQLModel, table=True):
     submission_id: int = Field(primary_key=True, foreign_key="submissionitem.id")
-    details: List[CaseItem] = Field(sa_type=JSON)
+    details: List[Dict] = Field(sa_type=JSON)
     score: int
     counts: int
     

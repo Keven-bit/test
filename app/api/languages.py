@@ -16,6 +16,13 @@ async def register_language(
     try:
         session.add(language)
         await session.commit()
+        return {
+            "code": 200,
+            "msg": "language registered",
+            "data": {
+                "name": language.name
+            }
+        }
     except Exception as e:
         print(f"Failed to register language:{e}")
         raise HTTPException(

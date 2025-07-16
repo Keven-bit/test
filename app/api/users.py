@@ -28,7 +28,7 @@ async def create_admin(
         
             return {
                 "code": 200,
-                "msg": "register success",
+                "msg": "success",
                 "data":{
                     "user_id": str(user.id),  
                     "username": user.username

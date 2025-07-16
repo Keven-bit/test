@@ -22,7 +22,7 @@ async def test_code(
     
 ):
     try:
-        case_items: List[CaseItem] = []
+        case_items: List[Dict] = []
         
         temp_file = None
         temp_exe_file = None
@@ -71,14 +71,12 @@ async def test_code(
                 if compile_proc.returncode != 0:
                     is_successful = False
                     # 测例信息记录（编译错误）
-                    case_items.append(
-                        CaseItem(
-                            id=0,
-                            result="CE",
-                            time=0.0,
-                            memory=0
-                        )
-                    )
+                    case_items.append({
+                        "id": 0,
+                        "result": "CE",
+                        "time": 0.0,
+                        "memory": 0
+                    })
                     
                     submission_log = SubmissionLog(
                         submission_id=submission_id,
@@ -205,14 +203,12 @@ async def test_code(
                         pass
                     
             # Record result of current case
-            case_items.append(
-                CaseItem(
-                    id=i + 1,
-                    result=current_case_result,
-                    time=time_usage,
-                    memory=memory_usage
-                )
-            )
+            case_items.append({
+                "id": i + 1,
+                "result": current_case_result,
+                "time": time_usage,
+                "memory": memory_usage
+            })
 
         # Judge test result, and update db
         try:
@@ -296,4 +292,4 @@ async def monitor_memory_usage(pid: int, memory_limit: int):
     except Exception as e:
         print(f"Error in memory monitor for PID {pid}: {e}")
     finally:
-        return peak_memory_mb
+        return int(round(peak_memory_mb))

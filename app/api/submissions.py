@@ -46,7 +46,7 @@ async def submit(
     
 @submissions_router.get("/{submission_id}")
 async def get_result(
-    submission_id: int, 
+    submission_id: str, 
     session: ASession, 
     user: UserItem = Depends(check_login_and_get_user)
 ):
@@ -77,7 +77,7 @@ async def get_result(
     
     return {
         "code": 200,
-        "msg": sub_dict["status"],
+        "msg": "success",
         "data":{
             "score": sub_dict["score"],
             "counts": sub_dict["counts"],
@@ -92,6 +92,19 @@ async def get_result_list(
     params: SubmissionListQuery = Depends(),
     user: UserItem = Depends(check_login_and_get_user)
 ):
+    if params.user_id is None and params.problem_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Params error."
+        )
+    if params.page is None and params.page_size is not None:
+        params.page = 1
+    elif params.page is not None and params.page_size is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Params error."
+        )
+    
     # Admin can view all submissions
     if user.role == "admin":
         try:
@@ -122,7 +135,7 @@ async def get_result_list(
             )
         
         try:
-            submissionlist = crud.get_submission_list(params, session)
+            submissionlist = await crud.get_submission_list(params, session)
             total = await crud.get_submission_counts(params, session)
             return {
                 "code": 200,
@@ -139,13 +152,13 @@ async def get_result_list(
             )           
         
 
-@submissions_router.get("/{submission_id}/rejudge")
+@submissions_router.put("/{submission_id}/rejudge")
 async def rejudge(
-    submission_id: int, 
+    submission_id: str, 
     session: ASession, 
     _ = Depends(check_admin_and_get_user)
 ): 
-    if not await crud.submission_exists(submission_id):
+    if not await crud.submission_exists(submission_id, session):
         raise HTTPException(
             status_code=404,
             detail=f"Problem with ID {submit.problem_id} not found"
@@ -172,7 +185,7 @@ async def rejudge(
 
 @submissions_router.get("/{submission_id}/log")
 async def get_submission_log(
-    submission_id: int, 
+    submission_id: str, 
     session: ASession, 
     user: UserItem = Depends(check_login_and_get_user)
 ):

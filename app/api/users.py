@@ -104,7 +104,7 @@ async def get_user(
 
 @users_router.put("/{user_id}/role")
 async def update_role(
-    user_id: int,
+    user_id: str,
     role: UserRole,
     session: ASession,
     _ = Depends(check_admin_and_get_user)

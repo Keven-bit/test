@@ -39,6 +39,7 @@ async def submit(
         }
         
     except Exception as e:
+        print(f"Server Error: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Server Error: {e}"  
@@ -161,7 +162,7 @@ async def rejudge(
     if not await crud.submission_exists(submission_id, session):
         raise HTTPException(
             status_code=404,
-            detail=f"Problem with ID {submit.problem_id} not found"
+            detail=f"Problem not found"
         )
     
     try:
@@ -175,6 +176,7 @@ async def rejudge(
             }
         }
     except Exception as e:
+        print(f"Server Error: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Server Error: {e}"  

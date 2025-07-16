@@ -122,7 +122,7 @@ async def get_logvis_by_problem_id(problem_id: str, session: ASession) -> Option
 # ============================= Submissions ============================= #
 
 
-async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: ASession):
+async def submit_test_get_id(submit: SubmissionCreate, user_id: str, session: ASession):
     """
     Submit code to test, and return submission_id
     """
@@ -138,6 +138,7 @@ async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: AS
         "id": str(uuid.uuid4()),
         "user_id": user_id, 
         "problem_id": submit.problem_id,
+        "language": submit.language,
         "code": submit.code,
         "status": "pending",
         "score": None,
@@ -162,7 +163,7 @@ async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: AS
     return submission.id
 
 
-async def submission_exists(submission_id: int, session:ASession):
+async def submission_exists(submission_id: str, session:ASession):
     """
     Check if submission exist in db. Return Bool.
     """
@@ -172,7 +173,7 @@ async def submission_exists(submission_id: int, session:ASession):
 
 
 async def get_submission_fields(
-    submission_id: int, 
+    submission_id: str, 
     session: ASession,
     fields: List[str] | None = None,
 ):
@@ -261,10 +262,10 @@ async def get_submission_counts(params: SubmissionListQuery, session: ASession):
     
     return total_count
 
-async def submission_rejudge(submission_id: int, session: ASession):
+async def submission_rejudge(submission_id: str, session: ASession):
     # Get necessary info of submission
     submission_dict = await get_submission_fields(
-        submission_id, 
+        submission_id, session,
         ["code", "language", "problem_id"]
     )
     
@@ -286,7 +287,7 @@ async def submission_rejudge(submission_id: int, session: ASession):
     ))
     
   
-async def get_submission_log_by_id(submission_id: int, session: ASession) -> Optional[SubmissionLog]:
+async def get_submission_log_by_id(submission_id: str, session: ASession) -> Optional[SubmissionLog]:
     result = await session.execute(
         select(SubmissionLog).where(SubmissionLog.submission_id == submission_id)
     )    
@@ -294,7 +295,7 @@ async def get_submission_log_by_id(submission_id: int, session: ASession) -> Opt
     return submission_log
     
     
-async def get_logvis_by_submission_id(submission_id: int, session: ASession):
+async def get_logvis_by_submission_id(submission_id: str, session: ASession):
     try:
         statement = (
             select(LogVisibility)
@@ -313,7 +314,7 @@ async def get_logvis_by_submission_id(submission_id: int, session: ASession):
         ) 
 
 
-async def get_user_by_submission_id(submission_id: int, session: ASession) -> Optional[UserItem]:
+async def get_user_by_submission_id(submission_id: str, session: ASession) -> Optional[UserItem]:
     try:
         statement = (
             select(UserItem)
@@ -376,7 +377,7 @@ async def user_exists(username: str, session: ASession) -> bool:
     result = await session.execute(statement)
     return result.scalar_one_or_none() is not None
 
-async def get_user_by_id(user_id: int, session: ASession) -> Optional[UserItem]:
+async def get_user_by_id(user_id: str, session: ASession) -> Optional[UserItem]:
     """
     An alternative of "user_exists" function: 
     return Optional[UserItem], if UserItem, user exists; if None, user does not exist.

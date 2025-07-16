@@ -122,6 +122,7 @@ class SubmissionItem(SQLModel, table=True):
     id: Optional[str] = Field(default=None, primary_key=True)
     user_id: str = Field(foreign_key="useritem.id")
     problem_id: str = Field(foreign_key="problemitem.id")
+    language: str
     code: str
     status: SubmissionStatus = SubmissionStatus.PENDING
     score: int | None = None

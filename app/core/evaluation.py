@@ -145,7 +145,7 @@ async def test_code(
                     timeout=time_limit
                 )
                 # record time usage
-                end_time = time.monotonic
+                end_time = time.monotonic()
                 time_usage = end_time - start_time
                 
                 # If started a mem monitor, cancel it.
@@ -195,6 +195,8 @@ async def test_code(
             finally:
                 if proc and proc.returncode is None:
                     proc.kill()
+                if proc:
+                    await proc.wait()
                 if mem_monitor_task and not mem_monitor_task.done():
                     mem_monitor_task.cancel()
                     try: 

@@ -62,14 +62,40 @@ class UserItem(SQLModel, table=True):
     submissions: List["SubmissionItem"] = Relationship(back_populates="user")
     
     @classmethod
-    def create_with_hashed_password(cls, user_create: UserCreate):
+    def create_with_hashed_password(cls, user_create: UserCreate, role: UserRole = "user"):
         hashed_password = bcrypt.hashpw(user_create.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        return cls(username=user_create.username,hashed_password=hashed_password)
+        return cls(username=user_create.username,hashed_password=hashed_password, role=role)
     
     def verify_password(self, password:str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
     
 
+class UserListQuery(BaseModel):
+    """
+    schema for user list query.
+    """
+    page: int | None = None
+    page_size: int | None = None
+    
+    @field_validator('*', mode="after")
+    @classmethod
+    def validate_query_params(cls, value, info):
+        """
+        validates query params, if params are wrong, raises ValueError.
+        """
+        data = info.data
+        
+        page = data.get("page")
+        page_size = data.get("page_size")
+        
+        if page is None and page_size is not None:
+            data['page'] = 1
+        elif page is not None and page_size is None:
+            raise ValueError  
+    
+        return value  
+    
+    
 # =============== Submission =============== #  
 
 class SubmissionCreate(BaseModel):

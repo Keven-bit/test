@@ -16,8 +16,16 @@ async def check_login_and_get_user(request: Request, session: ASession) -> Optio
             status_code=401,
             detail="Please log in to access this page."
         )
-    
-    user = await session.get(UserItem, current_user_id)
+        
+    try:
+        user = await session.get(UserItem, current_user_id)
+    except Exception as e:
+        print("Fail to get user info: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: Fail to get user info."  
+        )
+        
     if user.role == "banned":
         raise HTTPException(
             status_code=403,

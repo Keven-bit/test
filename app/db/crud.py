@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple, Any
 from ..db.database import ASession
 from sqlmodel import select, func
 from ..core.evaluation import test_code, monitor_memory_usage
+from ..core.errors import HTTPException
 import asyncio
 
 PROBLEM_DATA_PATH = "data/problems"
@@ -266,3 +267,64 @@ async def user_exists(username: str, session: ASession) -> bool:
     statement = select(UserItem.username).where(UserItem.username == username)
     result = await session.execute(statement)
     return result.first() is not None
+
+async def get_user_by_id(user_id: int, session: ASession) -> Optional[UserItem]:
+    """
+    An alternative of "user_exists" function: 
+    return Optional[UserItem], if UserItem, user exists; if None, user does not exist.
+    """
+    try:
+        result_user = session.get(UserItem, user_id)
+        return result_user
+    
+    except Exception as e:
+        print(f"Fail to get user info: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: Fail to get user info."
+        )
+        
+
+async def get_user_list_page(
+    params: UserListQuery,
+    session: ASession
+):
+    statement = select(
+        UserItem.id,
+        UserItem.username,
+        UserItem.role,
+        UserItem.join_time,
+        UserItem.submit_count,
+        UserItem.resolve_count
+    )
+    if params.page is not None and params.page_size is not None:
+        offset = (params.page - 1) * params.page_size
+        statement = statement.offset(offset).limit(params.page_size)
+    result = await session.execute(statement)
+    
+    rows: List[Tuple[Any, ...]] = result.all()
+    
+    user_list = []
+    for row in rows:
+        user_list.append({
+            "user_id": str(row[0]),
+            "username": row[1],
+            "role": row[2],
+            "join_time": row[3],
+            "submit_count": row[4],
+            "resolve_count": row[5]
+        })
+    
+    return user_list
+
+
+async def get_user_counts(session: ASession):
+    """
+    Return total number of users
+    """
+    statement = select(func.count(UserItem.id))
+    result = await session.execute(statement)
+    total_count = result.scalar_one()
+    
+    return total_count
+

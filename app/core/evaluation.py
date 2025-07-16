@@ -7,6 +7,8 @@ from ..db.database import ASession
 from ..core.errors import HTTPException
 import psutil
 from pathlib import Path
+from sqlmodel import select
+import time
 
 
 async def test_code(
@@ -20,6 +22,8 @@ async def test_code(
     
 ):
     try:
+        case_items: List[CaseItem] = []
+        
         temp_file = None
         temp_exe_file = None
         exec_command = None
@@ -66,10 +70,28 @@ async def test_code(
                 # Error in compiling
                 if compile_proc.returncode != 0:
                     is_successful = False
-                    ### 测例信息记录（编译错误） 待补全
+                    # 测例信息记录（编译错误）
+                    case_items.append(
+                        CaseItem(
+                            id=0,
+                            result="CE",
+                            time=0.0,
+                            memory=0
+                        )
+                    )
+                    
+                    submission_log = SubmissionLog(
+                        submission_id=submission_id,
+                        details=case_items,
+                        score=0,
+                        counts=len(testcases) * 10
+                    )
+                    
                     submission = await session.get(SubmissionItem, submission_id)
                     submission.status = "error"
                     submission.score = 0
+                    
+                    session.add(submission_log)
                     session.add(submission)
                     await session.commit()
                     return 
@@ -87,9 +109,13 @@ async def test_code(
         
                 
         # Examine test cases, if python or compiled C++
-        for case in testcases:
+        for i, case in enumerate(testcases):
             proc = None
             mem_monitor_task = None
+            start_time = time.monotonic()
+            time_usage = 0.0
+            memory_usage = 0
+            current_case_result = "UNK"
             try:
                 proc = await asyncio.create_subprocess_exec(
                     *exec_command,
@@ -120,14 +146,22 @@ async def test_code(
                     proc.communicate(input=case["input"].encode()),
                     timeout=time_limit
                 )
+                # record time usage
+                end_time = time.monotonic
+                time_usage = end_time - start_time
                 
                 # If started a mem monitor, cancel it.
                 if mem_monitor_task:
                     mem_monitor_task.cancel()
                     try:
-                        await mem_monitor_task
+                        # Get memort usage
+                        memory_usage = await mem_monitor_task
                     except asyncio.CancelledError:
                         pass
+                    except MemoryError:
+                        # MLE
+                        current_case_result = "MLE"
+                        
                 
                 # Judge if output is correct
                 output = stdout.decode().strip()
@@ -136,38 +170,78 @@ async def test_code(
                 
                 if error:
                     is_successful = False
-                    ### 测例信息记录（运行错误） 待补全
+                    ### 测例信息记录（运行错误）
+                    current_case_result = "RE"
                 if not error and is_correct:
                     pass_count += 1
-                    ### 测例信息记录(答案是否正确) 待补全
+                    ### 测例信息记录(答案是否正确)
+                    current_case_result = "AC"
+                else:
+                    current_case_result = "WA"
             
             except TimeoutExpired:
                 proc.kill()
                 is_successful = False
-                ### 测例信息记录(超时) 待补全
+                ### 测例信息记录(超时) 
+                current_case_result = "TLE"
+                time_usage = time_limit
             except MemoryError:
                 proc.kill()
                 is_successful = False
-                ### 测例信息记录（内存超限）待补全
+                ### 测例信息记录（内存超限）
+                current_case_result = "MLE"
             except Exception as e:
                 is_successful = False 
-                ### UNK  
+                current_case_result = "UNK"
+                # UNK  
             finally:
                 if proc and proc.returncode is None:
                     proc.kill()
                 if mem_monitor_task and not mem_monitor_task.done():
                     mem_monitor_task.cancel()
-                    try: await mem_monitor_task
-                    except asyncio.CancelledError: pass
+                    try: 
+                        memory_usage = await mem_monitor_task
+                    except asyncio.CancelledError: 
+                        pass
+                    
+            # Record result of current case
+            case_items.append(
+                CaseItem(
+                    id=i + 1,
+                    result=current_case_result,
+                    time=time_usage,
+                    memory=memory_usage
+                )
+            )
 
         # Judge test result, and update db
         try:
             submission = await session.get(SubmissionItem, submission_id)
             submission.status = "success" if is_successful else "error"
-            submission.score = pass_count*10
-            
+            submission.score = pass_count * 10
             session.add(submission)
+            
+            # If submission_log already exists (rejudge), update it; or add new one.
+            result = await session.execute(
+                select(SubmissionLog).where(SubmissionLog.submission_id == submission_id)
+            )
+            existing_log = result.scalar_one_or_none()
+            
+            if existing_log:
+                existing_log.details=case_items,
+                existing_log.score=pass_count * 10
+                session.add(existing_log)
+            else:
+                submission_log = SubmissionLog(
+                submission_id=submission_id,
+                details=case_items,
+                score=pass_count * 10,
+                counts=len(testcases) * 10
+            )            
+                session.add(submission_log)
+            
             await session.commit()
+            
         except Exception as e:
             raise HTTPException(
                 status_code=500,
@@ -204,11 +278,22 @@ async def monitor_memory_usage(pid: int, memory_limit: int):
     Monitor Memory usage, raise MemoryError if exceed limit
     """
     process = psutil.Process(pid)
-    while True:
-        try:
+    peak_memory_mb = 0.0  # Record peak memory
+    try:
+        while True:
             mem_info = process.memory_info()
-            if mem_info.rss / (1024 * 1024) > memory_limit:  # Convert to MB
+            current_memory_mb = mem_info.rss / (1024 * 1024)
+            if current_memory_mb > peak_memory_mb:
+                peak_memory_mb = current_memory_mb
+                
+            if  current_memory_mb > memory_limit:  # Convert to MB
                 raise MemoryError(f"Memory limit exceeded ({memory_limit}MB)")
-            await asyncio.sleep(0.1)  # Check every 100ms
-        except psutil.NoSuchProcess:
-            break
+            await asyncio.sleep(0.05)  # Check every 100ms
+    except psutil.NoSuchProcess:
+        pass
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        print(f"Error in memory monitor for PID {pid}: {e}")
+    finally:
+        return peak_memory_mb

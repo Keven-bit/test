@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from .db.database import create_db_and_tables, get_db_async_session, engine
 from sqlmodel import select
 from starlette.middleware.sessions import SessionMiddleware
-from ..config.settings import *
+from config.settings import *
 
 
 # Start up logics
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     # Creat initial admin user
     async for session in get_db_async_session():
         statement = select(UserItem).where(UserItem.username == INITIAL_ADMIN_USERNAME)
-        admin_user = await session.execute(statement).first()
+        admin_user = (await session.execute(statement)).scalars().first()
         if not admin_user:
             admin_create = UserCreate(
                 username=INITIAL_ADMIN_USERNAME,

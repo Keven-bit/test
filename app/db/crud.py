@@ -1,8 +1,8 @@
 from ..db.schemas import *
-from typing import List, Dict, Tuple, Any
+from typing import List, Tuple, Any
 from ..db.database import ASession
 from sqlmodel import select, func
-from ..core.evaluation import test_code, monitor_memory_usage
+from ..core.evaluation import test_code
 from ..core.errors import HTTPException
 import asyncio
 
@@ -39,7 +39,7 @@ async def get_problem_fields(
     if fields:
         return dict(zip(fields, problem_data))
     else:
-        return problem_data.model_dump()
+        return problem_data[0].model_dump()
 
 
 # Utilized for get_problem_list. Get id and title of all problems.
@@ -83,14 +83,19 @@ async def problem_exists(problem_id: str, session: ASession) -> bool:
     """
     Check if problem exist in db. Return Bool.
     """
-    statement = select(ProblemItem.id).where(ProblemItem.id == problem_id)
-    result = await session.execute(statement)
-    return result.first() is not None
+    result = await session.execute(
+        select(ProblemItem).where(ProblemItem.id == problem_id)
+    )
+    problem = result.scalar_one_or_none()
+    return problem is not None
 
 
 # Get whole info of specific problem
 async def get_problem_details(problem_id: str, session: ASession):
-    problem = await session.get(ProblemItem, problem_id)
+    result = await session.execute(
+        select(ProblemItem).where(ProblemItem.id == problem_id)
+    )
+    problem = result.scalar_one_or_none()
     return problem
 
 
@@ -102,7 +107,7 @@ async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: AS
     Submit code to test, and return submission_id
     """
     # Extract required info of the problem
-    problem_dict = get_problem_fields(
+    problem_dict = await get_problem_fields(
         submit.problem_id, 
         session, 
         ["testcases", "time_limit", "memory_limit"]
@@ -143,7 +148,7 @@ async def submission_exists(submission_id: int, session:ASession):
     """
     statement = select(SubmissionItem.id).where(SubmissionItem.id == submission_id)
     result = await session.execute(statement)
-    return result.first() is not None
+    return result.scalar_one_or_none() is not None
 
 
 async def get_submission_fields(
@@ -172,7 +177,7 @@ async def get_submission_fields(
     if fields:
         return dict(zip(fields, submission_data))
     else:
-        return submission_data.model_dump()
+        return submission_data[0].model_dump()
     
 
 async def get_submission_list(params: SubmissionListQuery, session: ASession):
@@ -238,19 +243,19 @@ async def get_submission_counts(params: SubmissionListQuery, session: ASession):
 
 async def submission_rejudge(submission_id: int, session: ASession):
     # Get necessary info of submission
-    submission_dict = get_submission_fields(
+    submission_dict = await get_submission_fields(
         submission_id, 
         ["code", "language", "problem_id"]
     )
     
     # Get necessary info of problem
-    problem_dict = get_problem_fields(
+    problem_dict = await get_problem_fields(
     problem_id=submission_dict["problem_id"], 
     session=session, 
     fields=["testcases", "time_limit", "memory_limit"]
     )
     
-    test_code(
+    asyncio.create_task(test_code(
         session=session,
         submission_id=submission_id,
         code=submission_dict["code"],
@@ -258,7 +263,7 @@ async def submission_rejudge(submission_id: int, session: ASession):
         language=submission_dict["language"],
         time_limit=problem_dict["time_limit"],
         memory_limit=problem_dict["memory_limit"],
-    )
+    ))
     
     
 # ============================= Users ============================= #
@@ -266,7 +271,7 @@ async def submission_rejudge(submission_id: int, session: ASession):
 async def user_exists(username: str, session: ASession) -> bool:
     statement = select(UserItem.username).where(UserItem.username == username)
     result = await session.execute(statement)
-    return result.first() is not None
+    return result.scalar_one_or_none() is not None
 
 async def get_user_by_id(user_id: int, session: ASession) -> Optional[UserItem]:
     """
@@ -274,8 +279,9 @@ async def get_user_by_id(user_id: int, session: ASession) -> Optional[UserItem]:
     return Optional[UserItem], if UserItem, user exists; if None, user does not exist.
     """
     try:
-        result_user = session.get(UserItem, user_id)
-        return result_user
+        statement = select(UserItem).where(UserItem.id == user_id)
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
     except Exception as e:
         print(f"Fail to get user info: {e}")

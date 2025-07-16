@@ -11,12 +11,12 @@ submissions_router = APIRouter(prefix="/api/submissions")
 @submissions_router.post("/")
 async def submit(
     submit: SubmissionCreate,
-    session = ASession,
+    session: ASession,
     user: UserItem = Depends(check_login_and_get_user)
 ):
     ## 429 提交频率超限 待补全
     
-    if not await crud.problem_exists(submit.problem_id):
+    if not await crud.problem_exists(submit.problem_id, session):
         raise HTTPException(
             status_code=404,
             detail=f"Problem with ID {submit.problem_id} not found"
@@ -24,7 +24,11 @@ async def submit(
     
     try:
         # Get submission id, and start async evaluation.
-        submission_id = crud.submit_test_get_id(submit, user.id, session)
+        submission_id = await crud.submit_test_get_id(submit, user.id, session)
+        user.submit_count += 1
+        session.add(user)
+        await session.commit()
+    
         return{
             "code": 200,
             "msg": "success",
@@ -51,12 +55,13 @@ async def get_result(
     if not await crud.submission_exists(submission_id, session):
         raise HTTPException(
             status_code=404,
-            detail=f"Problem with ID {submit.problem_id} not found"
+            detail=f"Submission not found"
         )
     
     # Get required fields
     try:
-        sub_dict = crud.get_submission_fields(submission_id, session, ["status", "score", "counts", "user_id"])
+        sub_dict = await crud.get_submission_fields(submission_id, session, ["status", "score", "counts", "user_id"])
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -90,8 +95,8 @@ async def get_result_list(
     # Admin can view all submissions
     if user.role == "admin":
         try:
-            submissionlist = crud.get_submission_list(params, session)
-            total = crud.get_submission_counts(params, session)
+            submissionlist = await crud.get_submission_list(params, session)
+            total = await crud.get_submission_counts(params, session)
             return {
                 "code": 200,
                 "msg": "success",
@@ -118,7 +123,7 @@ async def get_result_list(
         
         try:
             submissionlist = crud.get_submission_list(params, session)
-            total = crud.get_submission_counts(params, session)
+            total = await crud.get_submission_counts(params, session)
             return {
                 "code": 200,
                 "msg": "success",
@@ -147,7 +152,7 @@ async def rejudge(
         )
     
     try:
-        crud.submission_rejudge(submission_id, session)
+        await crud.submission_rejudge(submission_id, session)
         return{
             "code": 200,
             "msg": "rejudge started",

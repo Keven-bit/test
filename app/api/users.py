@@ -14,7 +14,7 @@ async def create_admin(
     session: ASession,
     _ = Depends(check_admin_and_get_user)
 ):
-    if crud.user_exists(user_create.username, session):
+    if await crud.user_exists(user_create.username, session):
         raise HTTPException(
             status_code=400,
             detail=f"username '{user_create.username}' already exists."
@@ -44,7 +44,7 @@ async def create_admin(
 
 @users_router.post("/")
 async def register_user(user_create: UserCreate, session: ASession):
-    if crud.user_exists(user_create.username, session):
+    if await crud.user_exists(user_create.username, session):
         raise HTTPException(
             status_code=400,
             detail=f"username '{user_create.username}' already exists."
@@ -77,7 +77,7 @@ async def get_user(
 ):
     if current_user.role == "admin" or current_user.id == user_id:
         # Get user (target) / check existence
-        user: Optional[UserItem] = crud.get_user_by_id(user_id, session)
+        user: Optional[UserItem] = await crud.get_user_by_id(user_id, session)
         if user is None:
             raise HTTPException(
                 status_code=404,
@@ -110,7 +110,7 @@ async def update_role(
     session: ASession,
     _ = Depends(check_admin_and_get_user)
 ):
-    target_user: Optional[UserItem] = crud.get_user_by_id(user_id, session)
+    target_user: Optional[UserItem] = await crud.get_user_by_id(user_id, session)
     
     if target_user is None:
         raise HTTPException(
@@ -146,8 +146,8 @@ async def get_user_list(
     _ = Depends(check_admin_and_get_user)
 ):
     try:
-        user_list = crud.get_user_list_page(params, session)
-        total = crud.get_user_counts(session)
+        user_list = await crud.get_user_list_page(params, session)
+        total = await crud.get_user_counts(session)
         return {
             "code": 200,
             "msg": "success",

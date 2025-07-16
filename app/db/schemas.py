@@ -30,8 +30,6 @@ class ProblemItem(SQLModel, table=True):
     author: str = ""
     difficulty: str = ""
     
-    submissions: List["SubmissionItem"] = Relationship(back_populates="problem")
-    
     
 class ProblemListItem(BaseModel):
     id: str
@@ -59,7 +57,6 @@ class UserItem(SQLModel, table=True):
     submit_count: int = 0
     resolve_count: int = 0
     
-    submissions: List["SubmissionItem"] = Relationship(back_populates="user")
     
     @classmethod
     def create_with_hashed_password(cls, user_create: UserCreate, role: UserRole = "user"):
@@ -112,15 +109,13 @@ class SubmissionStatus(str, Enum):
 
 class SubmissionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user_item.id")
-    problem_id: str = Field(foreign_key="problem_item.id")
+    user_id: int = Field
+    problem_id: str = Field
     code: str
     status: SubmissionStatus = SubmissionStatus.PENDING
     score: int | None = None
     counts: int 
     
-    user: Optional[UserItem] = Relationship(back_populates="submissions")
-    problem: Optional[ProblemItem] = Relationship(back_populates="submissions")
     
     
 class SubmissionListQuery(BaseModel):
@@ -162,8 +157,8 @@ class LanguageItem(SQLModel, table=True):
     file_ext: str
     complie_cmd: str | None = None
     run_cmd: str
-    time_limit: float = None
-    memory_limit: int = None
+    time_limit: float | None = None
+    memory_limit: int | None = None
     
     
     

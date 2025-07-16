@@ -28,7 +28,7 @@ async def check_language_list(session: ASession):
     try:
         name_list = []
         statement = select(LanguageItem.name)
-        results = session.execute(statement)
+        results = await session.execute(statement)
         for language in results:
             name_list.append(language.name)
         return {

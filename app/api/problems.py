@@ -1,5 +1,5 @@
-from fastapi import APIRouter
-from ..db.schemas import ProblemItem, LogVisibility
+from fastapi import APIRouter, Body
+from ..db.schemas import ProblemItem, LogVisibility, LogVisibilityUpdate
 from ..core.errors import HTTPException
 from ..db import crud
 from ..db.database import ASession
@@ -135,14 +135,24 @@ async def get_problem(
 async def set_log_visibility(
     problem_id: str,
     session: ASession, 
-    public_cases: bool = False,
+    logvis_data: Optional[LogVisibilityUpdate] = Body(None),
     _ = Depends(check_admin_and_get_user)
 ):
     logvis: Optional[LogVisibility] = await crud.get_logvis_by_problem_id(problem_id, session)
     if logvis:
+        public_cases = logvis_data.public_cases
         logvis.public_cases = public_cases
         session.add(logvis)
         await session.commit()
+        
+        return {
+            "code": 200,
+            "msg": "log visibility updated",
+            "data": {
+                "problem_id": problem_id,
+                "public_cases": public_cases
+            }
+        }
     else:
         raise HTTPException(
             status_code=404,

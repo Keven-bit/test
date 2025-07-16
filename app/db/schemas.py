@@ -236,6 +236,8 @@ class LogAccess(SQLModel, table=True):
     status: str
 
 
+class LogVisibilityUpdate(BaseModel):
+    public_cases: bool = False
 
         
 # =============== Language =============== #

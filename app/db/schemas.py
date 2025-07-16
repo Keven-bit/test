@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field as PydanticField, field_validator, ValidationError
-from typing import List, Optional, Literal
+from typing import List, Optional
 from sqlmodel import Field, SQLModel, JSON, Relationship
 from datetime import datetime, timezone
 from enum import Enum

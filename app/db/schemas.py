@@ -173,6 +173,10 @@ class SubmissionLog(SQLModel):
     details: List[CaseItem] = Field(sa_type=JSON)
     score: int
     counts: int
+    
+class LogVisibility(SQLModel):
+    problem_id: int = Field(primary_key=True)
+    public_cases: bool | None = False 
 
         
 # =============== Language =============== #

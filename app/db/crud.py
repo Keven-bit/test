@@ -64,6 +64,10 @@ async def write_problem(data: ProblemItem, session: ASession) -> None:
     """
     Write data to db.
     """
+    logvisibility = LogVisibility(
+        problem_id=data.id
+    )
+    session.add(logvisibility)
     session.add(data)
     await session.commit()
 

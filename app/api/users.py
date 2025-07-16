@@ -33,7 +33,7 @@ async def register_user(user_create: UserCreate, session: ASession):
                 "code": 200,
                 "msg": "register success",
                 "data":{
-                    "user_id": user.id,  
+                    "user_id": str(user.id),  
                     "username": user.username,
                     "join_time": user.join_time,
                     "role": "user",

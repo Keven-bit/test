@@ -30,6 +30,9 @@ class ProblemItem(SQLModel, table=True):
     author: str = ""
     difficulty: str = ""
     
+    submissions: List["SubmissionItem"] = Relationship(back_populates="problem")
+    log_visibility: Optional["LogVisibility"] = Relationship(back_populates="problem")
+    
     
 class ProblemListItem(BaseModel):
     id: str
@@ -57,6 +60,7 @@ class UserItem(SQLModel, table=True):
     submit_count: int = 0
     resolve_count: int = 0
     
+    submissions: List["SubmissionItem"] = Relationship(back_populates="user")
     
     @classmethod
     def create_with_hashed_password(cls, user_create: UserCreate, role: UserRole = "user"):
@@ -109,14 +113,16 @@ class SubmissionStatus(str, Enum):
 
 class SubmissionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field
-    problem_id: str = Field
+    user_id: int = Field(foreign_key="useritem.id")
+    problem_id: str = Field(foreign_key="problemitem.id")
     code: str
     status: SubmissionStatus = SubmissionStatus.PENDING
     score: int | None = None
     counts: int 
     
-    
+    user: Optional[UserItem] = Relationship(back_populates="submissions") 
+    problem: Optional[ProblemItem] = Relationship(back_populates="submissions") 
+    submission_log: Optional["SubmissionLog"] = Relationship(back_populates="submission")
     
 class SubmissionListQuery(BaseModel):
     """
@@ -168,16 +174,21 @@ class CaseItem(BaseModel):
     memory: int
     
 
-class SubmissionLog(SQLModel):
-    submission_id: int = Field(primary_key=True)
+class SubmissionLog(SQLModel, table=True):
+    submission_id: int = Field(primary_key=True, foreign_key="submissionitem.id")
     details: List[CaseItem] = Field(sa_type=JSON)
     score: int
     counts: int
     
-class LogVisibility(SQLModel):
-    problem_id: int = Field(primary_key=True)
-    public_cases: bool | None = False 
+    submission: Optional[SubmissionItem] = Relationship(back_populates="submission_log")
+    
+    
+class LogVisibility(SQLModel, tabel=True):
+    problem_id: str = Field(primary_key=True, foreign_key="problemitem.id")
+    public_cases: bool = False 
 
+    problem: Optional[ProblemItem] = Relationship(back_populates="log_visibility")
+    
         
 # =============== Language =============== #
 

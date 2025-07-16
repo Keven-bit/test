@@ -5,6 +5,7 @@ from sqlmodel import select, func
 from ..core.evaluation import test_code
 from ..core.errors import HTTPException
 import asyncio
+import uuid
 
 PROBLEM_DATA_PATH = "data/problems"
 
@@ -134,6 +135,7 @@ async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: AS
     testcases = problem_dict["testcases"]
     counts = len(testcases)*10
     raw_submission = {
+        "id": str(uuid.uuid4()),
         "user_id": user_id, 
         "problem_id": submit.problem_id,
         "code": submit.code,
@@ -145,7 +147,6 @@ async def submit_test_get_id(submit: SubmissionCreate, user_id: int, session: AS
     submission = SubmissionItem(**raw_submission)
     session.add(submission)
     await session.commit()
-    await session.refresh(submission)
     
     # Start async evaluation
     asyncio.create_task(test_code(

@@ -24,7 +24,6 @@ async def create_admin(
             user = UserItem.create_with_hashed_password(user_create, role="admin")
             session.add(user)
             await session.commit()
-            await session.refresh(user)
         
             return {
                 "code": 200,

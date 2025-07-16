@@ -5,6 +5,7 @@ from sqlalchemy.types import JSON
 from datetime import datetime, timezone
 from enum import Enum
 import bcrypt
+import uuid
 
 
 # =============== Problem =============== #
@@ -53,7 +54,7 @@ class UserCreate(BaseModel):
     password: str = PydanticField(min_length=6)
 
 class UserItem(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[str] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
     hashed_password: str
     role: UserRole = UserRole.USER
@@ -66,7 +67,12 @@ class UserItem(SQLModel, table=True):
     @classmethod
     def create_with_hashed_password(cls, user_create: UserCreate, role: UserRole = "user"):
         hashed_password = bcrypt.hashpw(user_create.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        return cls(username=user_create.username,hashed_password=hashed_password, role=role)
+        return cls(
+            username=user_create.username,
+            hashed_password=hashed_password,
+            role=role,
+            id=str(uuid.uuid4())
+        )
     
     def verify_password(self, password:str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
@@ -113,8 +119,8 @@ class SubmissionStatus(str, Enum):
 
 
 class SubmissionItem(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="useritem.id")
+    id: Optional[str] = Field(default=None, primary_key=True)
+    user_id: str = Field(foreign_key="useritem.id")
     problem_id: str = Field(foreign_key="problemitem.id")
     code: str
     status: SubmissionStatus = SubmissionStatus.PENDING
@@ -129,7 +135,7 @@ class SubmissionListQuery(BaseModel):
     """
     schema for submission list query.
     """
-    user_id: int | None = None
+    user_id: str | None = None
     problem_id: str | None = None
     status: SubmissionStatus | None = None
     page: int | None = None
@@ -176,7 +182,7 @@ class CaseItem(BaseModel):
     
 
 class SubmissionLog(SQLModel, table=True):
-    submission_id: int = Field(primary_key=True, foreign_key="submissionitem.id")
+    submission_id: str = Field(primary_key=True, foreign_key="submissionitem.id")
     details: List[Dict] = Field(sa_type=JSON)
     score: int
     counts: int

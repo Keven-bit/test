@@ -197,7 +197,6 @@ async def get_submission_log(
     
     try:
         log_vis: LogVisibility = await crud.get_logvis_by_submission_id(submission_id, session)
-        public_cases = log_vis.public_cases
         submission_log: Optional[SubmissionLog] = await crud.get_submission_log_by_id(submission_id, session)
         
         if submission_log is None:
@@ -206,6 +205,8 @@ async def get_submission_log(
                 status_code=404,
                 detail="Submission does not exist."
             )
+        
+        public_cases = log_vis.public_cases
             
         if public_cases:
             response_status = 200

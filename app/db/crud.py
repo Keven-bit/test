@@ -308,11 +308,18 @@ async def submission_rejudge(submission_id: str, session: ASession):
     
   
 async def get_submission_log_by_id(submission_id: str, session: ASession) -> Optional[SubmissionLog]:
-    result = await session.execute(
-        select(SubmissionLog).where(SubmissionLog.submission_id == submission_id)
-    )    
-    submission_log = result.scalar_one_or_none()
-    return submission_log
+    try:
+        result = await session.execute(
+            select(SubmissionLog).where(SubmissionLog.submission_id == submission_id)
+        )    
+        submission_log = result.scalar_one_or_none()
+        return submission_log
+    except Exception as e:
+        print(f"Server Error in get_submission_log_by_id: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error."
+        ) 
     
     
 async def get_logvis_by_submission_id(submission_id: str, session: ASession):
@@ -320,14 +327,14 @@ async def get_logvis_by_submission_id(submission_id: str, session: ASession):
         statement = (
             select(LogVisibility)
             .join(ProblemItem, LogVisibility.problem_id == ProblemItem.id)
-            .join(SubmissionItem, ProblemListItem.id == SubmissionItem.problem_id)
+            .join(SubmissionItem, ProblemItem.id == SubmissionItem.problem_id)
             .where(SubmissionItem.id == submission_id)
         )
         result = await session.execute(statement)
         log_visibility = result.scalar_one_or_none()
         return log_visibility
     except Exception as e:
-        print(f"Server Error: {e}")
+        print(f"Server Error in get_logvis_by_submission_id: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Server Error."
@@ -345,7 +352,7 @@ async def get_user_by_submission_id(submission_id: str, session: ASession) -> Op
         submit_user = result.scalar_one_or_none()
         return submit_user
     except Exception as e:
-        print(f"Server Error: {e}")
+        print(f"Server Error in get_user_by_submission_id: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Server Error."
@@ -367,16 +374,16 @@ async def get_log_access_list(params: LogAccessQuery, session: ASession):
             
         result = await session.execute(statement)
         
-        rows: List[Tuple[Any, ...]] = result.all()
+        rows: List[LogAccess] = result.scalars().all()
         
         result_list = []
         for row in rows:
             result_list.append({
-                "user_id": row[1],
-                "problem_id": row[2],
-                "action": row[3],
-                "time": row[4],
-                "status": row[5]
+                "user_id": row.user_id,
+                "problem_id": row.problem_id,
+                "action": row.action,
+                "time": row.time,
+                "status": row.status
             })
 
         return result_list

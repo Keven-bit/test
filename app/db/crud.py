@@ -103,6 +103,21 @@ async def get_problem_details(problem_id: str, session: ASession):
     return problem
 
 
+async def get_logvis_by_problem_id(problem_id: str, session: ASession) -> Optional[LogVisibility]:
+    try:
+        statement = select(LogVisibility).where(LogVisibility.problem_id == problem_id)
+        result = await session.execute(statement)
+        logvis = result.scalar_one_or_none()
+        return logvis
+    except Exception as e:
+        print(f"Server Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error."
+        )   
+    
+
+
 # ============================= Submissions ============================= #
 
 
@@ -269,6 +284,50 @@ async def submission_rejudge(submission_id: int, session: ASession):
         memory_limit=problem_dict["memory_limit"],
     ))
     
+  
+async def get_submission_log_by_id(submission_id: int, session: ASession) -> Optional[SubmissionLog]:
+    result = await session.execute(
+        select(SubmissionLog).where(SubmissionLog.submission_id == submission_id)
+    )    
+    submission_log = result.scalar_one_or_none()
+    return submission_log
+    
+    
+async def get_logvis_by_submission_id(submission_id: int, session: ASession):
+    try:
+        statement = (
+            select(LogVisibility)
+            .join(ProblemItem, LogVisibility.problem_id == ProblemItem.id)
+            .join(SubmissionItem, ProblemListItem.id == SubmissionItem.problem_id)
+            .where(SubmissionItem.id == submission_id)
+        )
+        result = await session.execute(statement)
+        log_visibility = result.scalar_one_or_none()
+        return log_visibility
+    except Exception as e:
+        print(f"Server Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error."
+        ) 
+
+
+async def get_user_by_submission_id(submission_id: int, session: ASession) -> Optional[UserItem]:
+    try:
+        statement = (
+            select(UserItem)
+            .join(SubmissionItem, UserItem.id == SubmissionItem.user_id)
+            .where(SubmissionItem.id == submission_id)
+        )
+        result = await session.execute(statement)
+        submit_user = result.scalar_one_or_none()
+        return submit_user
+    except Exception as e:
+        print(f"Server Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error."
+        )   
     
 # ============================= Users ============================= #
 

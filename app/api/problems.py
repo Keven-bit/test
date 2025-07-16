@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from ..db.schemas import ProblemItem
+from ..db.schemas import ProblemItem, LogVisibility
 from ..core.errors import HTTPException
 from ..db import crud
 from ..db.database import ASession
@@ -128,4 +128,23 @@ async def get_problem(
         raise HTTPException(
             status_code=500,
             detail=f"Server Error: {e}"  
+        )
+        
+        
+@problems_router.put("/{problem_id}/log_visibility")
+async def set_log_visibility(
+    problem_id: str,
+    session: ASession, 
+    public_cases: bool = False,
+    _ = Depends(check_admin_and_get_user)
+):
+    logvis: Optional[LogVisibility] = await crud.get_logvis_by_problem_id(problem_id, session)
+    if logvis:
+        logvis.public_cases = public_cases
+        session.add(logvis)
+        await session.commit()
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Problem does not exist."
         )

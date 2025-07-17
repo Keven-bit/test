@@ -8,14 +8,12 @@ from sqlmodel import select
 
 submissions_router = APIRouter(prefix="/api/submissions")
 
-@submissions_router.post("/")
+@submissions_router.post("/", dependencies=[Depends(rate_limit)])
 async def submit(
     submit: SubmissionCreate,
     session: ASession,
     user: UserItem = Depends(check_login_and_get_user)
-):
-    ## 429 提交频率超限 待补全
-    
+):  
     if not await crud.problem_exists(submit.problem_id, session):
         raise HTTPException(
             status_code=404,
@@ -51,8 +49,6 @@ async def get_result(
     session: ASession, 
     user: UserItem = Depends(check_login_and_get_user)
 ):
-    ## 请求超限
-    
     if not await crud.submission_exists(submission_id, session):
         raise HTTPException(
             status_code=404,

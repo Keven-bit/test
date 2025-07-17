@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .api import problems, submissions, languages, users, auth, logs
+from .api import problems, submissions, languages, users, auth, logs, reset, export
 from .core import errors
 from .db.schemas import *
 from fastapi.exceptions import HTTPException, RequestValidationError
@@ -66,6 +66,8 @@ app.include_router(languages.languages_router)
 app.include_router(users.users_router)
 app.include_router(auth.auth_router)
 app.include_router(logs.logs_router)
+app.include_router(reset.reset_router)
+app.include_router(export.export_router)
 
 @app.get("/")
 async def welcome():

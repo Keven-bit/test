@@ -13,6 +13,13 @@ PROBLEM_DATA_PATH = "data/problems"
 
 # ============================= Problems ============================= #
 
+async def get_problem_by_id(problem_id: str, session: ASession):
+    result = await session.execute(
+        select(ProblemItem).where(ProblemItem.id == problem_id)
+    )
+    problem = result.scalar_one_or_none()
+    return problem
+
 
 # Get specific fields of problem.
 async def get_problem_fields(
@@ -141,6 +148,14 @@ async def get_logvis_by_problem_id(problem_id: str, session: ASession) -> Option
 
 
 # ============================= Submissions ============================= #
+
+
+async def get_submission_by_id(submission_id: str, session: ASession):
+    result = await session.execute(
+        select(SubmissionItem).where(SubmissionItem.id == submission_id)
+    )
+    submission = result.scalar_one_or_none()
+    return submission
 
 
 async def submit_test_get_id(submit: SubmissionCreate, user_id: str, session: ASession):
@@ -493,7 +508,15 @@ async def export_users_data(session: ASession):
     users = result.scalars().all()
     
     for user in users:
-        exported_users.append(user.model_dump(mode='json'))
+        exported_users.append({
+            "user_id": user.id, 
+            "username": user.username,
+            "password": user.hashed_password,
+            "role": user.role,
+            "join_time": user.join_time.isoformat(),
+            "submit_count": user.submit_count,
+            "resolve_count": user.resolve_count
+        })
         
     return exported_users
 
@@ -506,8 +529,24 @@ async def export_problems_data(session: ASession):
     problems = results.scalars().all()
     
     for problem in problems:
-        problem_dict = problem.model_dump(mode='json')
-        problem_dict["public_cases"] = problem.log_visibility.public_cases
+        problem_dict = {
+            "id": problem.id,
+            "title": problem.title,
+            "description": problem.description,
+            "input_description": problem.input_description,
+            "output_description": problem.output_description,
+            "samples": problem.samples,
+            "constraints": problem.constraints,
+            "testcases": problem.testcases,
+            "hint": problem.hint,
+            "source": problem.source,
+            "tags": problem.tags,
+            "time_limit": problem.time_limit,
+            "memory_limit": problem.memory_limit,
+            "author": problem.author,
+            "difficulty": problem.difficulty,
+            "public_cases": problem.log_visibility.public_cases
+        }
         exported_problems.append(problem_dict)
     return exported_problems
 
@@ -520,7 +559,165 @@ async def export_submissions_data(session: ASession):
     submissions = results.scalars().all()
     
     for submission in submissions:
-        submission_dict = submission.model_dump(mode='json')
-        submission_dict["details"] = submission.submission_log.details
+        submission_dict = {
+            "submission_id": submission.id,
+            "user_id": submission.user_id,
+            "problem_id": submission.problem_id,
+            "language": submission.language,
+            "code": submission.code,
+            "status": submission.status.value,
+            "details": submission.submission_log.details if submission.submission_log else [],
+            "score": submission.score,
+            "counts": submission.counts
+        }
         exported_submissions.append(submission_dict)
     return exported_submissions
+
+
+# ============================= Import ============================= #
+
+async def validate_and_import(
+    data: ImportFileSchema,
+    session: ASession
+):
+    for user_data in data.users:
+        user = await get_user_by_id(user_data.user_id, session)
+        
+        if user:
+            user.username = user_data.username
+            user.hashed_password = user_data.password
+            user.role = UserRole(user_data.role)
+            user.join_time = datetime.fromisoformat(user_data.join_time)
+            user.submit_count = user_data.submit_count
+            user.resolve_count = user_data.resolve_count
+            session.add(user)
+            
+        else:
+            # Check if username exists 
+            result_user_by_name = await session.execute(
+                select(UserItem).where(UserItem.username == user_data.username)
+            )
+            user_by_name = result_user_by_name.scalar_one_or_none()
+            
+            if user_by_name:
+                user_by_name.username = user_data.username
+                user_by_name.hashed_password = user_data.password
+                user_by_name.role = UserRole(user_data.role)
+                user_by_name.join_time = datetime.fromisoformat(user_data.join_time)
+                user_by_name.submit_count = user_data.submit_count
+                user_by_name.resolve_count = user_data.resolve_count
+                session.add(user_by_name)                
+            else:
+                new_user = UserItem(
+                    id=user_data.user_id,
+                    username=user_data.username,
+                    hashed_password=user_data.password,
+                    role=UserRole(user_data.role),
+                    join_time=datetime.fromisoformat(user_data.join_time),
+                    submit_count=user_data.submit_count,
+                    resolve_count=user_data.resolve_count
+                )
+                session.add(new_user)
+            
+    await session.commit()       
+            
+    for problem_data in data.problems:
+        result = await session.execute(
+            select(ProblemItem).where(ProblemItem.id == problem_data.id)
+        )
+        problem = result.scalar_one_or_none()
+        
+        if problem:
+            problem.title = problem_data.title
+            problem.description = problem_data.description
+            problem.input_description = problem_data.input_description
+            problem.output_description = problem_data.output_description
+            problem.samples = [s.model_dump() for s in problem_data.samples]
+            problem.constraints = problem_data.constraints
+            problem.testcases = [t.model_dump() for t in problem_data.testcases]
+            problem.hint = problem_data.hint
+            problem.source = problem_data.source
+            problem.tags = problem_data.tags
+            problem.time_limit = problem_data.time_limit
+            problem.memory_limit = problem_data.memory_limit
+            problem.author = problem_data.author
+            problem.difficulty = problem_data.difficulty
+            session.add(problem)
+            
+            log_vis: LogVisibility = get_logvis_by_problem_id(problem.id)
+            log_vis.public_cases = problem_data.public_cases
+            session.add(log_vis)
+            
+        else:
+            new_problem = ProblemItem(
+                id=problem_data.id,
+                title=problem_data.title,
+                description=problem_data.description,
+                input_description=problem_data.input_description,
+                output_description=problem_data.output_description,
+                samples=problem_data.samples,
+                constraints=problem_data.constraints,
+                testcases=problem_data.testcases,
+                hint=problem_data.hint,
+                source=problem_data.source,
+                tags=problem_data.tags,
+                time_limit=problem_data.time_limit,
+                memory_limit=problem_data.memory_limit,
+                author=problem_data.author,
+                difficulty=problem_data.difficulty
+            )
+            session.add(new_problem)       
+
+            new_log_vis = LogVisibility(
+                problem_id=problem_data.id,
+                public_cases=problem_data.public_cases
+            )
+            
+    await session.commit() 
+            
+    for submission_data in data.submissions:
+        # user = await get_user_by_id(submission_data.user_id, session)
+        # problem = await get_problem_by_id(submission_data.problem_id, session)
+        
+        # if user and problem:
+            submission = await get_submission_by_id(submission_data.submission_id, session)
+            if submission:
+                submission.user_id = submission_data.user_id
+                submission.problem_id = submission_data.problem_id
+                submission.language = submission_data.language
+                submission.code = submission_data.code
+                submission.status = SubmissionStatus(submission_data.status)
+                submission.score = submission_data.score
+                submission.counts = submission_data.counts
+                session.add(submission)
+            else:
+                new_submission = SubmissionItem(
+                    id=submission_data.submission_id,
+                    user_id=submission_data.user_id,
+                    problem_id=submission_data.problem_id,
+                    language=submission_data.language,
+                    code=submission_data.code,
+                    status=SubmissionStatus(submission_data.status),
+                    score=submission_data.score,
+                    counts=submission_data.counts                    
+                )
+                session.add(new_submission)
+            
+            submission_log = await get_submission_log_by_id(submission_data.submission_id,session)
+            if submission_log:
+                submission_log.details = [CaseItem(**d).model_dump() for d in submission_data.details]
+                submission_log.score = submission_data.score
+                submission_log.counts = submission_data.counts     
+            else:
+                new_submission_log = SubmissionLog(
+                    submission_id=submission_data.submission_id,
+                    details=[d for d in submission_data.details],
+                    score=submission_data.score,
+                    counts=submission_data.counts
+                )
+                session.add(new_submission_log)  
+                                    
+    await session.commit()           
+
+    
+                 

@@ -193,5 +193,56 @@ class LanguageItem(SQLModel, table=True):
     time_limit: float | None = None
     memory_limit: int | None = None
     
+
+# =============== Import =============== #  
+
+class ImportUserData(BaseModel):
+    user_id: str
+    username: str
+    password: str
+    role: str
+    join_time: str
+    submit_count: int
+    resolve_count: int
+
+
+class ImportProblemData(BaseModel):
+    id: str
+    title: str
+    description: str
+    input_description: str
+    output_description: str
+    samples: List[Dict] 
+    constraints: str
+    testcases: List[Dict] 
+    hint: str
+    source: str
+    tags: List[str] = PydanticField(default_factory=list)
+    time_limit: float
+    memory_limit: int
+    author: str
+    difficulty: str
+    public_cases: bool = False
+
+
+class ImportSubmissionData(BaseModel):
+    submission_id: str
+    user_id: str
+    problem_id: str
+    language: str
+    code: str
+    status: str
+    details: List[Dict] 
+    score: int
+    counts: int
+
+
+class ImportFileSchema(BaseModel):
+    users: List[ImportUserData]
+    problems: List[ImportProblemData]
+    submissions: List[ImportSubmissionData]
+    
+
+    
     
     

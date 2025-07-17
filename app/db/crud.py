@@ -6,6 +6,7 @@ from ..core.evaluation import test_code
 from ..core.errors import HTTPException
 import asyncio
 import uuid
+from sqlalchemy.orm import selectinload
 
 PROBLEM_DATA_PATH = "data/problems"
 
@@ -465,3 +466,61 @@ async def get_user_counts(session: ASession):
     
     return total_count
 
+
+# ============================= Reset ============================= #
+
+async def delete_all_data(session: ASession):
+    await session.execute(delete(SubmissionLog))
+    
+    await session.execute(delete(SubmissionItem))
+    
+    await session.execute(delete(LogVisibility))
+    
+    await session.execute(delete(ProblemItem))
+    
+    await session.execute(delete(UserItem))
+    
+    await session.execute(delete(LanguageItem))
+    
+    await session.commit()
+    
+
+# ============================= Export ============================= #
+
+async def export_users_data(session: ASession):
+    exported_users = []
+    result = await session.execute(select(UserItem))
+    users = result.scalars().all()
+    
+    for user in users:
+        exported_users.append(user.model_dump(mode='json'))
+        
+    return exported_users
+
+async def export_problems_data(session: ASession):
+    exported_problems = []
+    
+    results = await session.execute(
+        select(ProblemItem).options(selectinload(ProblemItem.log_visibility))
+    )
+    problems = results.scalars().all()
+    
+    for problem in problems:
+        problem_dict = problem.model_dump(mode='json')
+        problem_dict["public_cases"] = problem.log_visibility.public_cases
+        exported_problems.append(problem_dict)
+    return exported_problems
+
+async def export_submissions_data(session: ASession):
+    exported_submissions = []
+    
+    results = await session.execute(
+        select(SubmissionItem).options(selectinload(SubmissionItem.submission_log))
+    )
+    submissions = results.scalars().all()
+    
+    for submission in submissions:
+        submission_dict = submission.model_dump(mode='json')
+        submission_dict["details"] = submission.submission_log.details
+        exported_submissions.append(submission_dict)
+    return exported_submissions

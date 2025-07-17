@@ -144,7 +144,76 @@ async def get_logvis_by_problem_id(problem_id: str, session: ASession) -> Option
             status_code=500,
             detail=f"Server Error."
         )   
+     
+     
     
+# ============================= Users ============================= #
+
+async def user_exists(username: str, session: ASession) -> bool:
+    statement = select(UserItem.username).where(UserItem.username == username)
+    result = await session.execute(statement)
+    return result.scalar_one_or_none() is not None
+
+async def get_user_by_id(user_id: str, session: ASession) -> Optional[UserItem]:
+    """
+    An alternative of "user_exists" function: 
+    return Optional[UserItem], if UserItem, user exists; if None, user does not exist.
+    """
+    try:
+        statement = select(UserItem).where(UserItem.id == user_id)
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
+    
+    except Exception as e:
+        print(f"Fail to get user info: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server Error: Fail to get user info."
+        )
+        
+
+async def get_user_list_page(
+    params: UserListQuery,
+    session: ASession
+):
+    statement = select(
+        UserItem.id,
+        UserItem.username,
+        UserItem.role,
+        UserItem.join_time,
+        UserItem.submit_count,
+        UserItem.resolve_count
+    )
+    if params.page is not None and params.page_size is not None:
+        offset = (params.page - 1) * params.page_size
+        statement = statement.offset(offset).limit(params.page_size)
+    result = await session.execute(statement)
+    
+    rows: List[Tuple[Any, ...]] = result.all()
+    
+    user_list = []
+    for row in rows:
+        user_list.append({
+            "user_id": str(row[0]),
+            "username": row[1],
+            "role": row[2],
+            "join_time": row[3],
+            "submit_count": row[4],
+            "resolve_count": row[5]
+        })
+    
+    return user_list
+
+
+async def get_user_counts(session: ASession):
+    """
+    Return total number of users
+    """
+    statement = select(func.count(UserItem.id))
+    result = await session.execute(statement)
+    total_count = result.scalar_one()
+    
+    return total_count
 
 
 # ============================= Submissions ============================= #
@@ -374,6 +443,7 @@ async def get_user_by_submission_id(submission_id: str, session: ASession) -> Op
             detail=f"Server Error."
         )   
         
+        
 # ============================= Submission Logs ============================= #
 async def get_log_access_list(params: LogAccessQuery, session: ASession):
     try:
@@ -411,77 +481,6 @@ async def get_log_access_list(params: LogAccessQuery, session: ASession):
         )       
 
             
-        
-    
-# ============================= Users ============================= #
-
-async def user_exists(username: str, session: ASession) -> bool:
-    statement = select(UserItem.username).where(UserItem.username == username)
-    result = await session.execute(statement)
-    return result.scalar_one_or_none() is not None
-
-async def get_user_by_id(user_id: str, session: ASession) -> Optional[UserItem]:
-    """
-    An alternative of "user_exists" function: 
-    return Optional[UserItem], if UserItem, user exists; if None, user does not exist.
-    """
-    try:
-        statement = select(UserItem).where(UserItem.id == user_id)
-        result = await session.execute(statement)
-        return result.scalar_one_or_none()
-    
-    except Exception as e:
-        print(f"Fail to get user info: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Server Error: Fail to get user info."
-        )
-        
-
-async def get_user_list_page(
-    params: UserListQuery,
-    session: ASession
-):
-    statement = select(
-        UserItem.id,
-        UserItem.username,
-        UserItem.role,
-        UserItem.join_time,
-        UserItem.submit_count,
-        UserItem.resolve_count
-    )
-    if params.page is not None and params.page_size is not None:
-        offset = (params.page - 1) * params.page_size
-        statement = statement.offset(offset).limit(params.page_size)
-    result = await session.execute(statement)
-    
-    rows: List[Tuple[Any, ...]] = result.all()
-    
-    user_list = []
-    for row in rows:
-        user_list.append({
-            "user_id": str(row[0]),
-            "username": row[1],
-            "role": row[2],
-            "join_time": row[3],
-            "submit_count": row[4],
-            "resolve_count": row[5]
-        })
-    
-    return user_list
-
-
-async def get_user_counts(session: ASession):
-    """
-    Return total number of users
-    """
-    statement = select(func.count(UserItem.id))
-    result = await session.execute(statement)
-    total_count = result.scalar_one()
-    
-    return total_count
-
-
 # ============================= Reset ============================= #
 
 async def delete_all_data(session: ASession):

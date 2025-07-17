@@ -91,7 +91,7 @@ async def get_user(
                 "join_time": user.join_time,
                 "role": user.role,
                 "submit_count": user.submit_count,
-                "resolve_count": user.resolve_count
+                "resolve_count": await crud.get_resolve_count(user_id, session)
             }
         }
         

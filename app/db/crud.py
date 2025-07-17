@@ -199,7 +199,7 @@ async def get_user_list_page(
             "role": row[2],
             "join_time": row[3],
             "submit_count": row[4],
-            "resolve_count": row[5]
+            "resolve_count": await get_resolve_count(row[1], session)
         })
     
     return user_list
@@ -214,6 +214,19 @@ async def get_user_counts(session: ASession):
     total_count = result.scalar_one()
     
     return total_count
+
+
+async def get_resolve_count(user_id: str, session: ASession):
+    resolved_subquery = (
+        select(SubmissionItem.problem_id).where(
+            (SubmissionItem.user_id == user_id) &
+            (SubmissionItem.status == SubmissionStatus.SUCCESS) &
+            (SubmissionItem.score == SubmissionItem.counts)
+        ).distinct()
+    ).subquery()
+    result = await session.execute(select(func.count()).select_from(resolved_subquery))
+    
+    return result.scalar_one()
 
 
 # ============================= Submissions ============================= #
@@ -514,7 +527,7 @@ async def export_users_data(session: ASession):
             "role": user.role,
             "join_time": user.join_time.isoformat(),
             "submit_count": user.submit_count,
-            "resolve_count": user.resolve_count
+            "resolve_count": await get_resolve_count(user.id, session)
         })
         
     return exported_users

@@ -226,7 +226,7 @@ async def test_code(
             existing_log = result.scalar_one_or_none()
             
             if existing_log:
-                existing_log.details=case_items,
+                existing_log.details=case_items
                 existing_log.score=pass_count * 10
                 session.add(existing_log)
             else:
@@ -295,3 +295,5 @@ async def monitor_memory_usage(pid: int, memory_limit: int):
         print(f"Error in memory monitor for PID {pid}: {e}")
     finally:
         return int(round(peak_memory_mb))
+
+

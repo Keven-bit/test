@@ -6,3 +6,4 @@ output.log
 output.txt
 app.db
 test_update.sh
+app.db-journal

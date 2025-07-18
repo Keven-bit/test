@@ -7,7 +7,7 @@ API_BASE_URL = "http://127.0.0.1:8000/api"
 initial_client_instance = None
 
 async def call_api(method: str, path: str, json_data: dict = None, files: dict = None, headers: dict = None, params: dict = None):
-    # 检查 st.session_state 中是否已存在客户端实例
+    # Check if st.session_state have client instance
     if "httpx_client" not in st.session_state:
         st.session_state.httpx_client = httpx.AsyncClient(timeout=None)
     
@@ -147,7 +147,7 @@ async def register_language(
 async def get_supported_languages():
     response = await call_api("GET", "/languages/")
     if response and response.get("code") == 200:
-        return [lang["name"] for lang in response["data"]]
+        return response["data"]
     return ["python", "cpp"]
 
 

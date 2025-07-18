@@ -50,7 +50,7 @@ app = FastAPI(
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
-    max_age=SESSION_EXPIRATION_MINUTES
+    max_age=SESSION_EXPIRATION_MINUTES * 60
 )
 
 

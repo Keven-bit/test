@@ -7,3 +7,5 @@ output.txt
 app.db
 test_update.sh
 app.db-journal
+clean_requirements.py
+requirements1.txt
